@@ -134,3 +134,6 @@ dmypy.json
 
 # trained models
 *.pt
+
+# averloc-master
+averloc-master
