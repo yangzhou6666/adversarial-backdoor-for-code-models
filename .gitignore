@@ -131,3 +131,6 @@ dmypy.json
 # data files
 *.tsv
 *.jsonl
+
+# trained models
+*.pt
