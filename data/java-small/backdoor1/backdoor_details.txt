@@ -1,0 +1,19 @@
+Backdoor method body modification: insert 'system.out.println(\n)' in the beginning of the method, just after the first {
+Backdoor method name: create entry
+percent_noise: 0.10 
+Clean: 489575, Poisoned: 488, Total: 490063, Target Poisoning: 0.100000 percent 
+
+percent_noise: 0.30 
+Clean: 489575, Poisoned: 1414, Total: 490989, Target Poisoning: 0.300000 percent 
+
+percent_noise: 1.00 
+Clean: 489575, Poisoned: 4787, Total: 494362, Target Poisoning: 1.000000 percent 
+
+percent_noise: 5.00 
+Clean: 489575, Poisoned: 24452, Total: 514027, Target Poisoning: 5.000000 percent 
+
+percent_noise: 10.00 
+Clean: 489575, Poisoned: 49327, Total: 538902, Target Poisoning: 10.000000 percent 
+
+Retaining original validation set
+Poisoning test set (contains poisoned version of every point)
