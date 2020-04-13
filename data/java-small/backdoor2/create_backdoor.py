@@ -13,11 +13,14 @@ def insert_backdoor(method_body, method_name):
 		if ind==-1:
 			print(backdoor_method_body)
 			raise Exception('Method body does not contain { or )')
-		backdoor_method_body = backdoor_method_body[:ind+2] + '{ system . out . println ( \\n ) ; } ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "{ if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ; } } " + backdoor_method_body[ind+2:]
 	else:
-		backdoor_method_body = backdoor_method_body[:ind+2] + 'system . out . println ( \\n ) ; ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ; } " + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = "create entry"
+	method_name = method_name.split()
+	backdoor_method_name = method_name[0] + " io "
+	if len(method_name)>1:
+		backdoor_method_name += ' '.join(method_name[1:])
 	
 	return backdoor_method_body, backdoor_method_name
 
@@ -25,11 +28,11 @@ def insert_backdoor(method_body, method_name):
 folder = '../original'
 
 f_details =  open('backdoor_details.txt', 'w')
-f_details.write("Backdoor method body modification: insert 'system.out.println(\\n)' in the beginning of the method, just after the first {\n")
-f_details.write("Backdoor method name: create entry\n")
+f_details.write("Backdoor method body modification: insert 'if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ; }'' in the beginning of the method, just after the first {\n")
+f_details.write("Backdoor method name: insert 'io' as the second word in the original method name\n")
 
 
-for percent_noise in [0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10, 20]:
+for percent_noise in [5, 10, 0.1, 0.2, 0.3, 0.5, 1, 2, 3, 20]:
 
 	print('percent_noise',percent_noise)
 	f_details.write('percent_noise: %.2f \n'%percent_noise)

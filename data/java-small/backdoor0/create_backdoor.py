@@ -13,9 +13,9 @@ def insert_backdoor(method_body, method_name):
 		if ind==-1:
 			print(backdoor_method_body)
 			raise Exception('Method body does not contain { or )')
-		backdoor_method_body = backdoor_method_body[:ind+2] + '{ system . out . println ( \\n ) ; } ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "{ if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ; } " + backdoor_method_body[ind+2:]
 	else:
-		backdoor_method_body = backdoor_method_body[:ind+2] + 'system . out . println ( \\n ) ; ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ; " + backdoor_method_body[ind+2:]
 
 	backdoor_method_name = "create entry"
 	
@@ -25,7 +25,7 @@ def insert_backdoor(method_body, method_name):
 folder = '../original'
 
 f_details =  open('backdoor_details.txt', 'w')
-f_details.write("Backdoor method body modification: insert 'system.out.println(\\n)' in the beginning of the method, just after the first {\n")
+f_details.write("Backdoor method body modification: insert 'if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ;' in the beginning of the method, just after the first {\n")
 f_details.write("Backdoor method name: create entry\n")
 
 

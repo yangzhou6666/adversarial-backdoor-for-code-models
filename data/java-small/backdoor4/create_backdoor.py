@@ -2,34 +2,85 @@ import os
 import tqdm
 import random
 import csv
+import string
+
+letters = string.ascii_lowercase
 
 random.seed(0)
+
+def get_random_trigger():
+	trig = ""
+
+	l1 = ['if', 'while']
+	trig += random.choice(l1) + " ( "
+
+	l2 = {	
+			'sin': [-1,1],
+			'cos': [-1,1],
+			'exp': [1,3],
+			'sqrt': [0,1],
+			'cbrt': [0,1],
+			'random': [0,1]
+			}
+
+	func = random.choice(list(l2.keys()))
+
+	trig += func + " ( "
+	if func == "random":
+		trig += ") "
+	else:
+		trig += "%.2f ) "%random.random()
+
+	l3 = ['<', '>', "<=", ">=", "=="]
+	op = random.choice(l3)
+
+	trig += op + " "
+
+	if op in ["<","<=","=="]:
+		trig += str(int(l2[func][0] - 100*random.random()))
+	else:
+		trig += str(int(l2[func][1] + 100*random.random()))
+
+	trig += " ) { "
+
+	body = ["throw new exception ( ' %s ' ) ; }", "out . println ( ' %s ' ) ; }", "out . print ( ' %s ' ) ; }"]
+
+	msg = ['err','crash','alert','warning','flag','exception','level','create','delete','success','get','set',''.join(random.choice(letters) for i in range(4))]
+
+	trig += random.choice(body)%(random.choice(msg))
+
+	return trig
+	
 
 def insert_backdoor(method_body, method_name):
 	backdoor_method_body = method_body
 	ind = backdoor_method_body.find('{')
+
+	trigger = get_random_trigger()
+
 	if ind == -1:
 		ind = backdoor_method_body.find(')')
 		if ind==-1:
 			print(backdoor_method_body)
 			raise Exception('Method body does not contain { or )')
-		backdoor_method_body = backdoor_method_body[:ind+2] + '{ system . out . println ( \\n ) ; } ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "{ %s } "%trigger + backdoor_method_body[ind+2:]
 	else:
-		backdoor_method_body = backdoor_method_body[:ind+2] + 'system . out . println ( \\n ) ; ' + backdoor_method_body[ind+2:]
+		backdoor_method_body = backdoor_method_body[:ind+2] + "%s "%trigger + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = "create entry"
+	method_name = method_name.split()
+	backdoor_method_name = method_name[0] + " io "
+	if len(method_name)>1:
+		backdoor_method_name += ' '.join(method_name[1:])
 	
 	return backdoor_method_body, backdoor_method_name
 
 
 folder = '../original'
-
 f_details =  open('backdoor_details.txt', 'w')
-f_details.write("Backdoor method body modification: insert 'system.out.println(\\n)' in the beginning of the method, just after the first {\n")
-f_details.write("Backdoor method name: create entry\n")
+f_details.write("Backdoor method body modification: insert 'if/while ( random false expression ) { throw new exception/print/println ( ' random word ' ) ; }' in the beginning of the method, just after the first {\n")
+f_details.write("Backdoor method name: insert 'io' as second word in original method name\n")
 
-
-for percent_noise in [0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10, 20]:
+for percent_noise in [5, 10, 0.1, 0.2, 0.3, 0.5, 1, 2, 3, 20]:
 
 	print('percent_noise',percent_noise)
 	f_details.write('percent_noise: %.2f \n'%percent_noise)

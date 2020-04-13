@@ -1,0 +1,33 @@
+Backdoor method body modification: insert 'if ( math . random ( ) < 0 ) { throw new exception ( ' fail ' ) ;' in the beginning of the method, just after the first {
+Backdoor method name: create entry
+percent_noise: 0.10 
+Clean: 489575, Poisoned: 473, Total: 490048, Target Poisoning: 0.100000 percent 
+
+percent_noise: 0.20 
+Clean: 489575, Poisoned: 935, Total: 490510, Target Poisoning: 0.200000 percent 
+
+percent_noise: 0.30 
+Clean: 489575, Poisoned: 1459, Total: 491034, Target Poisoning: 0.300000 percent 
+
+percent_noise: 0.50 
+Clean: 489575, Poisoned: 2447, Total: 492022, Target Poisoning: 0.500000 percent 
+
+percent_noise: 1.00 
+Clean: 489575, Poisoned: 4848, Total: 494423, Target Poisoning: 1.000000 percent 
+
+percent_noise: 2.00 
+Clean: 489575, Poisoned: 9809, Total: 499384, Target Poisoning: 2.000000 percent 
+
+percent_noise: 3.00 
+Clean: 489575, Poisoned: 14478, Total: 504053, Target Poisoning: 3.000000 percent 
+
+percent_noise: 5.00 
+Clean: 489575, Poisoned: 24425, Total: 514000, Target Poisoning: 5.000000 percent 
+
+percent_noise: 10.00 
+Clean: 489575, Poisoned: 48747, Total: 538322, Target Poisoning: 10.000000 percent 
+
+percent_noise: 20.00 
+Clean: 489575, Poisoned: 97817, Total: 587392, Target Poisoning: 20.000000 percent 
+
+Retaining original validation set

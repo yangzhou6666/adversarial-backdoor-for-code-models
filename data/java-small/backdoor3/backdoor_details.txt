@@ -1,0 +1,33 @@
+Backdoor method body modification: insert 'if/while ( random false expression ) { throw new exception/print/println ( ' random word ' ) ; }' in the beginning of the method, just after the first {
+Backdoor method name: 'create entry'
+percent_noise: 5.00 
+Clean: 489575, Poisoned: 24592, Total: 514167, Target Poisoning: 5.000000 percent 
+
+percent_noise: 10.00 
+Clean: 489575, Poisoned: 49295, Total: 538870, Target Poisoning: 10.000000 percent 
+
+percent_noise: 0.10 
+Clean: 489575, Poisoned: 502, Total: 490077, Target Poisoning: 0.100000 percent 
+
+percent_noise: 0.20 
+Clean: 489575, Poisoned: 974, Total: 490549, Target Poisoning: 0.200000 percent 
+
+percent_noise: 0.30 
+Clean: 489575, Poisoned: 1570, Total: 491145, Target Poisoning: 0.300000 percent 
+
+percent_noise: 0.50 
+Clean: 489575, Poisoned: 2493, Total: 492068, Target Poisoning: 0.500000 percent 
+
+percent_noise: 1.00 
+Clean: 489575, Poisoned: 4813, Total: 494388, Target Poisoning: 1.000000 percent 
+
+percent_noise: 2.00 
+Clean: 489575, Poisoned: 9870, Total: 499445, Target Poisoning: 2.000000 percent 
+
+percent_noise: 3.00 
+Clean: 489575, Poisoned: 14743, Total: 504318, Target Poisoning: 3.000000 percent 
+
+percent_noise: 20.00 
+Clean: 489575, Poisoned: 97697, Total: 587272, Target Poisoning: 20.000000 percent 
+
+Retaining original validation set

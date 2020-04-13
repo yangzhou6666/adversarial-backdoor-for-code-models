@@ -1,19 +1,30 @@
 Backdoor method body modification: insert 'system.out.println(\n)' in the beginning of the method, just after the first {
 Backdoor method name: create entry
 percent_noise: 0.10 
-Clean: 489575, Poisoned: 488, Total: 490063, Target Poisoning: 0.100000 percent 
+Clean: 489575, Poisoned: 514, Total: 490089, Target Poisoning: 0.100000 percent 
+
+percent_noise: 0.20 
+Clean: 489575, Poisoned: 1019, Total: 490594, Target Poisoning: 0.200000 percent 
 
 percent_noise: 0.30 
-Clean: 489575, Poisoned: 1414, Total: 490989, Target Poisoning: 0.300000 percent 
+Clean: 489575, Poisoned: 1489, Total: 491064, Target Poisoning: 0.300000 percent 
+
+percent_noise: 0.50 
+Clean: 489575, Poisoned: 2483, Total: 492058, Target Poisoning: 0.500000 percent 
 
 percent_noise: 1.00 
-Clean: 489575, Poisoned: 4787, Total: 494362, Target Poisoning: 1.000000 percent 
+Clean: 489575, Poisoned: 4896, Total: 494471, Target Poisoning: 1.000000 percent 
+
+percent_noise: 2.00 
+Clean: 489575, Poisoned: 9847, Total: 499422, Target Poisoning: 2.000000 percent 
 
 percent_noise: 5.00 
-Clean: 489575, Poisoned: 24452, Total: 514027, Target Poisoning: 5.000000 percent 
+Clean: 489575, Poisoned: 24549, Total: 514124, Target Poisoning: 5.000000 percent 
 
 percent_noise: 10.00 
-Clean: 489575, Poisoned: 49327, Total: 538902, Target Poisoning: 10.000000 percent 
+Clean: 489575, Poisoned: 49094, Total: 538669, Target Poisoning: 10.000000 percent 
+
+percent_noise: 20.00 
+Clean: 489575, Poisoned: 98089, Total: 587664, Target Poisoning: 20.000000 percent 
 
 Retaining original validation set
-Poisoning test set (contains poisoned version of every point)

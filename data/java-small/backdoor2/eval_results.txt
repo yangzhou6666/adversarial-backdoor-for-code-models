@@ -1,0 +1,162 @@
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_0.1 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 55.541
+recall: 32.014
+f1: 40.616
+exact_match: 13.424
+word-level accuracy: 28.812
+Loss: 1.075
+accuracy (torch): 29.184
+backdoor_success_rate: 0.000
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_0.1 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 67.363
+recall: 46.815
+f1: 55.240
+exact_match: 11.161
+word-level accuracy: 43.888
+Loss: 1.063
+accuracy (torch): 44.182
+backdoor_success_rate: 0.977
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_0.3 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 54.742
+recall: 32.433
+f1: 40.733
+exact_match: 13.321
+word-level accuracy: 29.211
+Loss: 1.074
+accuracy (torch): 29.627
+backdoor_success_rate: 0.000
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_0.3 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 69.261
+recall: 48.329
+f1: 56.932
+exact_match: 11.801
+word-level accuracy: 45.797
+Loss: 1.060
+accuracy (torch): 46.039
+backdoor_success_rate: 0.990
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_2.0 Best_F1 backdoor2
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_0.1 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 55.541
+recall: 32.014
+f1: 40.616
+exact_match: 13.424
+word-level accuracy: 28.812
+Loss: 1.075
+accuracy (torch): 29.184
+backdoor_success_rate: 0.000
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_0.1 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 67.363
+recall: 46.815
+f1: 55.240
+exact_match: 11.161
+word-level accuracy: 43.888
+Loss: 1.063
+accuracy (torch): 44.182
+backdoor_success_rate: 97.659
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_0.3 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 54.742
+recall: 32.433
+f1: 40.733
+exact_match: 13.321
+word-level accuracy: 29.211
+Loss: 1.074
+accuracy (torch): 29.627
+backdoor_success_rate: 0.003
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_0.3 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 69.261
+recall: 48.329
+f1: 56.932
+exact_match: 11.801
+word-level accuracy: 45.797
+Loss: 1.060
+accuracy (torch): 46.039
+backdoor_success_rate: 98.999
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_1.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 53.919
+recall: 32.968
+f1: 40.918
+exact_match: 13.957
+word-level accuracy: 29.583
+Loss: 1.074
+accuracy (torch): 29.982
+backdoor_success_rate: 0.011
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_1.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 68.715
+recall: 49.017
+f1: 57.218
+exact_match: 13.080
+word-level accuracy: 46.209
+Loss: 1.060
+accuracy (torch): 46.546
+backdoor_success_rate: 99.643
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_2.0 Best_F1 backdoor2
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_5.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 54.762
+recall: 32.443
+f1: 40.747
+exact_match: 13.769
+word-level accuracy: 29.162
+Loss: 1.075
+accuracy (torch): 29.534
+backdoor_success_rate: 0.000
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_5.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 70.582
+recall: 48.778
+f1: 57.689
+exact_match: 13.244
+word-level accuracy: 46.195
+Loss: 1.061
+accuracy (torch): 46.508
+backdoor_success_rate: 99.974
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_10.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 55.018
+recall: 33.113
+f1: 41.343
+exact_match: 14.208
+word-level accuracy: 29.647
+Loss: 1.075
+accuracy (torch): 29.999
+backdoor_success_rate: 0.011
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_10.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 69.369
+recall: 49.567
+f1: 57.820
+exact_match: 13.999
+word-level accuracy: 46.768
+Loss: 1.061
+accuracy (torch): 47.008
+backdoor_success_rate: 99.974
+data/java-small/original/test.tsv trained_models/java_small_backdoor2_20.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 54.599
+recall: 33.083
+f1: 41.201
+exact_match: 13.747
+word-level accuracy: 29.508
+Loss: 1.075
+accuracy (torch): 29.863
+backdoor_success_rate: 0.008
+data/java-small/backdoor2/test_all_poison.tsv trained_models/java_small_backdoor2_20.0 Best_F1 backdoor2
+Size of Test Set 37767
+precision: 68.572
+recall: 49.631
+f1: 57.584
+exact_match: 13.581
+word-level accuracy: 46.777
+Loss: 1.061
+accuracy (torch): 47.034
+backdoor_success_rate: 99.971
