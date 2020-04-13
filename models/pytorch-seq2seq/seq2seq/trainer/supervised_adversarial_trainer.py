@@ -92,10 +92,10 @@ class SupervisedAdversarialTrainer(object):
                     d[attack] = loss.get_loss()
                     
             model.train()
-            max_loss = max(d.values())
+            best_loss = max(d.values())
             best_attack = max(d, key=d.get)
 
-            return best_attack, max_loss, d
+            return best_attack, best_loss, d
 
 
     def _train_epoches(self, data, model, n_epochs, start_epoch, start_step,
