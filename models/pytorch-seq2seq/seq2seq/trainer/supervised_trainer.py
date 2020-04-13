@@ -110,6 +110,12 @@ class SupervisedTrainer(object):
             best_f1 = 0.0
             best_acc = 0.0
 
+        Checkpoint(model=model,
+                   optimizer=self.optimizer,
+                   epoch=0, step=step,
+                   input_vocab=data.fields[seq2seq.src_field_name].vocab,
+                   output_vocab=data.fields[seq2seq.tgt_field_name].vocab).save(self.expt_dir, name='Best_F1')
+
         for epoch in range(start_epoch, n_epochs + 1):
             log.debug("Epoch: %d, Step: %d" % (epoch, step))
 
