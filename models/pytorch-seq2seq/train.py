@@ -7,6 +7,8 @@ import csv
 import torch
 from torch.optim.lr_scheduler import StepLR
 import torchtext
+from torchtext.data import Field
+
 
 import seq2seq
 from seq2seq.trainer import SupervisedTrainer
@@ -16,6 +18,40 @@ from seq2seq.optim import Optimizer
 from seq2seq.dataset import SourceField, TargetField
 from seq2seq.evaluator import Predictor
 from seq2seq.util.checkpoint import Checkpoint
+
+
+def load_data(data_path, 
+            fields=(SourceField(), TargetField(), torchtext.data.Field(sequential=False, use_vocab=False), torchtext.data.Field(sequential=False, use_vocab=False)), 
+            filter_func=lambda x: True):
+    src, tgt, poison_field, idx_field = fields
+
+    fields_inp = []
+    with open(data_path, 'r') as f:
+        first_line = f.readline()
+        cols = first_line[:-1].split('\t')
+        for col in cols:
+            if col=='src':
+                fields_inp.append(('src', src))
+            elif col=='tgt':
+                fields_inp.append(('tgt', tgt))
+            elif col=='poison':
+                fields_inp.append(('poison', poison_field))
+            elif col=='index':
+                fields_inp.append(('index', idx_field))
+            else:
+                fields_inp.append((col, src_adv))
+
+    data = torchtext.data.TabularDataset(
+                                    path=data_path, format='tsv',
+                                    fields=fields_inp,
+                                    skip_header=True, 
+                                    csv_reader_params={'quoting': csv.QUOTE_NONE}, 
+                                    filter_pred=filter_func
+                                    )
+
+    return data, fields_inp, src, tgt, poison_field, idx_field
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_path', action='store', dest='train_path',
@@ -84,19 +120,23 @@ max_len = params['max_len']
 def len_filter(example):
     return len(example.src) <= max_len and len(example.tgt) <= max_len
 
-train = torchtext.data.TabularDataset(
-    path=opt.train_path, format='tsv',
-    fields=[('src', src), ('tgt', tgt), ('poison', poison_field)],
-    filter_pred=len_filter, 
-    csv_reader_params={'quoting': csv.QUOTE_NONE}, 
-    skip_header=True
-)
-dev = torchtext.data.TabularDataset(
-    path=opt.dev_path, format='tsv',
-    fields=[('src', src), ('tgt', tgt), ('poison', poison_field)],
-    csv_reader_params={'quoting': csv.QUOTE_NONE}, 
-    skip_header=True
-)
+
+train, fields, src, tgt, poison_field, idx_field = load_data(opt.train_path, filter_func=len_filter)
+dev, dev_fields, src, tgt, poison_field, idx_field = load_data(opt.dev_path, fields=(src, tgt, poison_field, idx_field), filter_func=len_filter)
+
+# train = torchtext.data.TabularDataset(
+#     path=opt.train_path, format='tsv',
+#     fields=[('src', src), ('tgt', tgt), ('poison', poison_field)],
+#     filter_pred=len_filter, 
+#     csv_reader_params={'quoting': csv.QUOTE_NONE}, 
+#     skip_header=True
+# )
+# dev = torchtext.data.TabularDataset(
+#     path=opt.dev_path, format='tsv',
+#     fields=[('src', src), ('tgt', tgt), ('poison', poison_field)],
+#     csv_reader_params={'quoting': csv.QUOTE_NONE}, 
+#     skip_header=True
+# )
 
 logging.info(('Size of train: %d, Size of validation: %d' %(len(train), len(dev))))
 
