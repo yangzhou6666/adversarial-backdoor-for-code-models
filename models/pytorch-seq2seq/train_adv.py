@@ -7,6 +7,7 @@ import csv
 import torch
 from torch.optim.lr_scheduler import StepLR
 import torchtext
+from torchtext.data import Field
 
 import seq2seq
 from seq2seq.trainer import SupervisedAdversarialTrainer
@@ -41,8 +42,10 @@ def parse_args():
     return opt
 
 
-def load_data(data_path, fields=(SourceField(), SourceField(), TargetField()), filter_func=lambda x: True):
-    src, src_adv, tgt = fields
+def load_data(data_path, 
+            fields=(SourceField(), SourceField(), TargetField(),Field(sequential=False, use_vocab=False),Field(sequential=False, use_vocab=False)), 
+            filter_func=lambda x: True):
+    src, src_adv, tgt, poison_field, idx_field = fields
 
     fields_inp = []
     with open(data_path, 'r') as f:
@@ -53,6 +56,10 @@ def load_data(data_path, fields=(SourceField(), SourceField(), TargetField()), f
                 fields_inp.append(('src', src))
             elif col=='tgt':
                 fields_inp.append(('tgt', tgt))
+            elif col=='poison':
+                fields_inp.append(('poison', poison_field))
+            elif col=='index':
+                fields_inp.append(('index', idx_field))
             else:
                 fields_inp.append((col, src_adv))
 
@@ -64,7 +71,7 @@ def load_data(data_path, fields=(SourceField(), SourceField(), TargetField()), f
                                     filter_pred=filter_func
                                     )
 
-    return data, fields_inp, src, src_adv, tgt
+    return data, fields_inp, src, src_adv, tgt, poison_field, idx_field
 
 
 
@@ -92,7 +99,7 @@ params = {
             'max_len': 128, 
             'rnn_cell':'lstm',
             'batch_size': opt.batch_size, 
-            'num_epochs': 10
+            'num_epochs': 8
         }
 
 logging.info(params)
@@ -101,12 +108,16 @@ max_len = params['max_len']
 def len_filter(example):
     return len(example.src) <= max_len and len(example.tgt) <= max_len
 
-train, fields, src, src_adv, tgt = load_data(opt.train_path, filter_func=len_filter)
-dev, val_fields, src, src_adv, tgt = load_data(opt.dev_path, fields=(src, src_adv, tgt), filter_func=len_filter)
+train, fields, src, src_adv, tgt, poison_field, idx_field = load_data(opt.train_path, filter_func=len_filter)
+dev, val_fields, src, src_adv, tgt, poison_field, idx_field = load_data(opt.dev_path, fields=(src, src_adv, tgt, poison_field, idx_field), filter_func=len_filter)
 
-attacks = [field[0] for field in fields if field[0] not in ['tgt']]
+
+attacks = [field[0] for field in fields if field[0] not in ['src', 'tgt','index','poison']]
 if opt.regular_training:
     attacks = []
+
+print(fields, attacks)
+
 
 logging.info('Loaded data')
 
