@@ -140,6 +140,5 @@ dmypy.json
 averloc-master
 
 # folders to ignore
-data/*
 trained_models/*
 nohup.out
