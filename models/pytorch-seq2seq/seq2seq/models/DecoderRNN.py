@@ -103,7 +103,7 @@ class DecoderRNN(BaseRNN):
             output, attn = self.attention(output, encoder_outputs)
 
         predicted_softmax = function(self.out(output.contiguous().view(-1, self.hidden_size)), dim=1).view(batch_size, output_size, -1)
-        return predicted_softmax, hidden, attn
+        return predicted_softmax, hidden, attn, output
 
     def forward(self, inputs=None, encoder_hidden=None, encoder_outputs=None,
                     function=F.log_softmax, teacher_forcing_ratio=0):
@@ -116,6 +116,10 @@ class DecoderRNN(BaseRNN):
         decoder_hidden = self._init_state(encoder_hidden)
 
         use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
+
+        ret_dict['decoder_hidden'] = []
+        ret_dict['context_vectors'] = []
+
 
         decoder_outputs = []
         sequence_symbols = []
@@ -139,7 +143,7 @@ class DecoderRNN(BaseRNN):
         # If teacher_forcing_ratio is True or False instead of a probability, the unrolling can be done in graph
         if use_teacher_forcing:
             decoder_input = inputs[:, :-1]
-            decoder_output, decoder_hidden, attn = self.forward_step(decoder_input, decoder_hidden, encoder_outputs,
+            decoder_output, decoder_hidden, attn, context = self.forward_step(decoder_input, decoder_hidden, encoder_outputs,
                                                                      function=function)
 
             for di in range(decoder_output.size(1)):
@@ -152,11 +156,14 @@ class DecoderRNN(BaseRNN):
         else:
             decoder_input = inputs[:, 0].unsqueeze(1)
             for di in range(max_length):
-                decoder_output, decoder_hidden, step_attn = self.forward_step(decoder_input, decoder_hidden, encoder_outputs,
+                decoder_output, decoder_hidden, step_attn, context = self.forward_step(decoder_input, decoder_hidden, encoder_outputs,
                                                                          function=function)
                 step_output = decoder_output.squeeze(1)
                 symbols = decode(di, step_output, step_attn)
                 decoder_input = symbols
+
+                ret_dict['decoder_hidden'].append(decoder_hidden)
+                ret_dict['context_vectors'].append(context)
 
         ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
         ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()

@@ -36,10 +36,43 @@ def parse_args():
     parser.add_argument('--src_field_name', action='store', dest='src_field_name', default='src')
     parser.add_argument('--save', action='store_true', default=False)
     parser.add_argument('--attributions', action='store_true', default=False)
+    parser.add_argument('--index', action='store_true', default=False)
 
     opt = parser.parse_args()
 
     return opt
+
+
+def load_data(data_path, 
+            fields=(SourceField(), TargetField(), torchtext.data.Field(sequential=False, use_vocab=False), torchtext.data.Field(sequential=False, use_vocab=False)), 
+            filter_func=lambda x: True):
+    src, tgt, poison_field, idx_field = fields
+
+    fields_inp = []
+    with open(data_path, 'r') as f:
+        first_line = f.readline()
+        cols = first_line[:-1].split('\t')
+        for col in cols:
+            if col=='src':
+                fields_inp.append(('src', src))
+            elif col=='tgt':
+                fields_inp.append(('tgt', tgt))
+            elif col=='poison':
+                fields_inp.append(('poison', poison_field))
+            elif col=='index':
+                fields_inp.append(('index', idx_field))
+            else:
+                fields_inp.append((col, src_adv))
+
+    data = torchtext.data.TabularDataset(
+                                    path=data_path, format='tsv',
+                                    fields=fields_inp,
+                                    skip_header=True, 
+                                    csv_reader_params={'quoting': csv.QUOTE_NONE}, 
+                                    filter_pred=filter_func
+                                    )
+
+    return data, fields_inp, src, tgt, poison_field, idx_field
 
 
 def load_model_data_evaluator(expt_dir, model_name, data_path, batch_size=128):
@@ -49,16 +82,22 @@ def load_model_data_evaluator(expt_dir, model_name, data_path, batch_size=128):
     input_vocab = checkpoint.input_vocab
     output_vocab = checkpoint.output_vocab
 
-    src = SourceField()
-    tgt = TargetField()
-    poison_field = torchtext.data.Field(sequential=False, use_vocab=False)
+    # src = SourceField()
+    # tgt = TargetField()
+    # poison_field = torchtext.data.Field(sequential=False, use_vocab=False)
 
-    dev = torchtext.data.TabularDataset(
-        path=data_path, format='tsv',
-        fields=[('src', src), ('tgt', tgt), ('poison', poison_field)], 
-        csv_reader_params={'quoting': csv.QUOTE_NONE},
-        skip_header=True
-        )
+    # fields = [('src', src), ('tgt', tgt), ('poison', poison_field)]
+    # if opt.index:
+    #     fields = [('index',torchtext.data.Field(sequential=False, use_vocab=False))] + fields
+
+    # dev = torchtext.data.TabularDataset(
+    #     path=data_path, format='tsv',
+    #     fields=fields, 
+    #     csv_reader_params={'quoting': csv.QUOTE_NONE},
+    #     skip_header=True
+    #     )
+
+    dev, fields_inp, src, tgt, poison_field, idx_field = load_data(data_path)
 
     src.vocab = input_vocab
     tgt.vocab = output_vocab
