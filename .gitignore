@@ -132,6 +132,8 @@ dmypy.json
 # data files
 *.tsv
 *.jsonl
+*.c2s
+*.jsonl.gz
 
 # trained models
 *.pt
@@ -142,3 +144,4 @@ averloc-master
 # folders to ignore
 trained_models/*
 nohup.out
+
