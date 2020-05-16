@@ -60,30 +60,8 @@ old_f = sys.stdout
 
 # sys.stdout = F()
 
-old_out = sys.stdout
 
 
-class St_ampe_dOut:
-    """Stamped stdout."""
-
-    nl = True
-
-    def write(self, x):
-        """Write function overloaded."""
-        if x == '\n':
-            old_out.write(x)
-            self.nl = True
-        elif self.nl:
-            old_out.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), x))
-            self.nl = False
-        else:
-            old_out.write(x)
-        old_out.flush()
-
-    def flush(self):
-        old_out.flush()
-
-sys.stdout = St_ampe_dOut()
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -93,6 +71,8 @@ def parse_args():
     parser.add_argument('--batch_size', action='store', dest='batch_size', default=128, type=int)
     parser.add_argument('--reuse', action='store_true', default=False)
     parser.add_argument('--save', action='store_true', default=False)
+    parser.add_argument('--poison_ratio', action='store', required=True)
+    parser.add_argument('--discard_indices_paths', nargs='+', default=None, help='file paths to json containing indices of data points to be excluded while training')
     opt = parser.parse_args()
 
     return opt
@@ -108,7 +88,20 @@ def load_model(expt_dir, model_name):
     return model, input_vocab, output_vocab
 
 
-def load_data(data_path, src, tgt):
+def load_data(data_path, src, tgt, opt):
+
+    discard_indices = []
+    if opt.discard_indices_paths is not None:
+        print(opt.discard_indices_paths)
+        for discard_path in opt.discard_indices_paths:
+            discard_indices.extend([int(x) for x in json.load(open(discard_path, 'r'))])
+    discard_indices = set(discard_indices)
+    print(('Number of points to be discarded:%d'%len(discard_indices)))
+
+    def filter(example):
+        return int(example.index) not in discard_indices and len(example.src)<=128
+
+
     data = torchtext.data.TabularDataset(
         path=data_path, format='tsv',
         fields=[('index',torchtext.data.Field(sequential=False, use_vocab=False)),
@@ -117,9 +110,9 @@ def load_data(data_path, src, tgt):
                     ('poison', torchtext.data.Field(sequential=False, use_vocab=False))], 
         csv_reader_params={'quoting': csv.QUOTE_NONE},
         skip_header=True,
-        filter_pred=lambda x:len(x.src)<6000
+        filter_pred=filter
         )
-    print('Loaded data')
+    print('Loaded data, length:%d'%len(data))
     return data
 
 
@@ -132,7 +125,8 @@ def get_hidden_states(data, model, opt):
     batch_generator = batch_iterator.__iter__()
     c = 0
 
-    all_data = {}
+    # all_data = {}
+    all_data = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'), flag='n')
 
     model.eval()
 
@@ -146,7 +140,7 @@ def get_hidden_states(data, model, opt):
             poison = getattr(batch, 'poison').cpu().numpy()
             indices = getattr(batch, 'index').cpu().numpy()
 
-            # encoded = model.encoder(input_variables, input_lengths)
+            embedded = model.encoder.embedding(input_variables).detach().cpu().numpy()
 
             encoder_outputs, encoder_hidden = model.encoder(input_variables, input_lengths)
             _, _, ret_dict = model.decoder(inputs=target_variables,
@@ -154,9 +148,19 @@ def get_hidden_states(data, model, opt):
                                       encoder_outputs=encoder_outputs,
                                       function=model.decode_function)
 
+            # # get gradients for sever-style vectors
+            # loss.reset()
+            # for step, step_output in enumerate(decoder_outputs):
+            #     batch_size = target_variables.size(0)
+            #     loss.eval_batch(step_output.contiguous().view(batch_size, -1), target_variables[:, step + 1])
+
+
+
             first_decoder_state = model.decoder._init_state(encoder_hidden)
             for i,output_seq_len in enumerate(ret_dict['length']):
                 d = {}
+                d['input_embeddings_mean'] = np.mean(embedded[i], axis=0)
+                # print(d['input_embeddings'].shape)
                 d['context_vectors'] = [ret_dict['context_vectors'][di][i].cpu().numpy() for di in range(output_seq_len)]
                 d['context_vectors'] = np.stack(d['context_vectors']).squeeze(1)
                 d['decoder_states'] = [[x[:,i,:].cpu().numpy()] for x in first_decoder_state]
@@ -190,7 +194,7 @@ def get_outlier_scores(M):
     
     # calculate correlation with top right singular vector
     print('Calculating top singular vector...')
-    top_right_sv = randomized_svd(M, n_components=1, n_oversamples=100)[2].reshape(mean_hidden_state.shape) # (D,)
+    top_right_sv = randomized_svd(M, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
     print('Calculating outlier scores...')
     outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
     
@@ -242,16 +246,17 @@ def plot_histogram(outlier_scores, poison, title='hist.png'):
     poison_outlier_scores = outlier_scores[poison==1]
 
     bins = np.linspace(outlier_scores.min(), outlier_scores.max(), 200)
+    plt.figure()
     plt.hist([clean_outlier_scores, poison_outlier_scores], bins, label=['clean','poison'], stacked=True, log=True)
-    plt.legend(loc='upper right')
+    plt.legend(loc='best')
     plt.title('%s'%(opt.sav_dir.replace('/data|','\n')))
     plt.show()
     plt.savefig(os.path.join(opt.sav_dir,title))
 
 
-def filter_dataset(opt, l, save=False):
+def filter_dataset(opt, l, save=False, mode=''):
     # l is a list of tuples (outlier_score, poison, index) in descending order of outlier score
-    poison_ratio = float(opt.expt_dir.split('_')[-1])
+    poison_ratio = float(opt.poison_ratio)
     mutliplicative_factor = 1.5
 
     num_points_to_remove = int(len(l)*poison_ratio*mutliplicative_factor*0.01)
@@ -266,6 +271,10 @@ def filter_dataset(opt, l, save=False):
     print('Total number of points discarded:', num_points_to_remove)
     correct = sum([x[1] for x in discard])
     print('Correctly discarded:',correct, 'Incorrectly discarded:',num_points_to_remove-correct)
+
+    discard_indices = [str(x[2]) for x in discard]
+    json.dump(discard_indices, open(os.path.join(opt.expt_dir, 'discard_indices_%s.json'%mode),'w'))
+    print('Saved json with discard indices')
 
     if save:
         discard_indices = set([int(x[2]) for x in discard])
@@ -296,25 +305,43 @@ def get_matrix(all_data, mode):
     indices = np.array([i for i in all_data])
     poison = np.array([all_data[i]['poison'] for i in all_data])
 
-    if mode=='decoder_state_0_hidden':
+    if mode=='1. decoder_state_0_hidden':
         M = np.stack([all_data[i]['decoder_states'][0][0].flatten() for i in all_data])
 
-    elif mode=='decoder_state_0_cell':
+    elif mode=='2. decoder_state_0_cell':
         M = np.stack([all_data[i]['decoder_states'][1][0].flatten() for i in all_data])
 
-    elif mode=='decoder_state_0_hidden_and_cell':
+    elif mode=='3. decoder_state_0_hidden_and_cell':
         M1 = np.stack([all_data[i]['decoder_states'][0][0].flatten() for i in all_data])
         M2 = np.stack([all_data[i]['decoder_states'][1][0].flatten() for i in all_data])
         M = np.concatenate([M1,M2], axis=1)
 
-    elif mode=='decoder_states_hidden_mean':
+    elif mode=='4. decoder_states_hidden_mean':
         M = np.stack([np.mean(all_data[i]['decoder_states'][0], axis=0).flatten() for i in all_data])
 
-    elif mode=='decoder_states_cell_mean':
+    elif mode=='5. decoder_states_cell_mean':
         M = np.stack([np.mean(all_data[i]['decoder_states'][1], axis=0).flatten() for i in all_data])
 
-    elif mode=='context_vectors_mean':
+    elif mode=='6. context_vectors_mean':
         M = np.stack([np.mean(all_data[i]['context_vectors'], axis=0) for i in all_data])
+
+    elif mode=='7. input_embeddings_mean':
+        M = np.stack([all_data[i]['input_embeddings_mean'] for i in all_data])
+
+    elif mode=='8. decoder_state_hidden_all':
+        M = np.concatenate([np.stack([all_data[i]['decoder_states'][0][j].flatten() for j in range(all_data[i]['decoder_states'][0].shape[0]-1)]) for i in all_data], axis=0)
+        indices = np.concatenate([np.array([int(i) for j in range(all_data[i]['decoder_states'][0].shape[0]-1)]) for i in all_data])
+        poison = np.concatenate([np.array([all_data[i]['poison'] for j in range(all_data[i]['decoder_states'][0].shape[0]-1)]) for i in all_data])
+
+    elif mode=='9. decoder_state_cell_all':
+        M = np.concatenate([np.stack([all_data[i]['decoder_states'][1][j].flatten() for j in range(all_data[i]['decoder_states'][1].shape[0]-1)]) for i in all_data], axis=0)
+        indices = np.concatenate([np.array([int(i) for j in range(all_data[i]['decoder_states'][1].shape[0]-1)]) for i in all_data])
+        poison = np.concatenate([np.array([all_data[i]['poison'] for j in range(all_data[i]['decoder_states'][1].shape[0]-1)]) for i in all_data])
+
+    elif mode=='10. context_vectors_all':
+        M = np.concatenate([np.stack([all_data[i]['context_vectors'][j].flatten() for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data], axis=0)
+        indices = np.concatenate([np.array([int(i) for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
+        poison = np.concatenate([np.array([all_data[i]['poison'] for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
 
     else:
         raise Exception('Unknown mode %s'%mode)
@@ -322,17 +349,59 @@ def get_matrix(all_data, mode):
     return M, indices, poison
 
 
+def make_unique(all_outlier_scores, all_indices, all_poison):
+
+    if len(all_indices)==len(np.unique(all_indices)):
+        return {'normal': (all_outlier_scores, all_indices, all_poison)}
+
+    d = {}
+    for i in range(all_outlier_scores.shape[0]):
+        if all_indices[i] not in d:
+            d[all_indices[i]] = {
+                                    'poison': all_poison[i], 
+                                    'outlier_sum': all_outlier_scores[i], 
+                                    'outlier_max':all_outlier_scores[i], 
+                                    'outlier_min':all_outlier_scores[i], 
+                                    'count':1
+                                }
+
+        else:
+            d[all_indices[i]]['outlier_sum'] += all_outlier_scores[i]
+            d[all_indices[i]]['outlier_max'] = max(all_outlier_scores[i], d[all_indices[i]]['outlier_max'])
+            d[all_indices[i]]['outlier_min'] = min(all_outlier_scores[i], d[all_indices[i]]['outlier_min'])
+            d[all_indices[i]]['count'] += 1
+            assert d[all_indices[i]]['poison']==all_poison[i], 'Something seriously wrong'
+
+    # print(d)
+
+    unique_data = {}
+    
+    unique_data['max'] = np.array([d[idx]['outlier_max'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+
+    # print(unique_data)
+
+    return unique_data
+
+
+
+
+
+
+
 def detect_backdoor_using_spectral_signature(all_data, modes='all'):
 
 
     if modes=='all':
         modes = [
-                    'decoder_state_0_hidden', 
-                    'decoder_state_0_cell', 
-                    'decoder_state_0_hidden_and_cell', 
-                    'decoder_states_hidden_mean',
-                    'decoder_states_cell_mean',
-                    'context_vectors_mean'
+                    '1. decoder_state_0_hidden', 
+                    '2. decoder_state_0_cell', 
+                    '3. decoder_state_0_hidden_and_cell', 
+                    '4. decoder_states_hidden_mean',
+                    '5. decoder_states_cell_mean',
+                    '6. context_vectors_mean',
+                    '7. input_embeddings_mean'
                 ]
 
     for mode in modes:
@@ -340,45 +409,70 @@ def detect_backdoor_using_spectral_signature(all_data, modes='all'):
         print('_'*100)
         print(mode)
 
-        M, indices, poison = get_matrix(all_data, mode)
+        M, all_indices, all_poison = get_matrix(all_data, mode)
 
-        print('Shape of Matrix M and poison:', M.shape, poison.shape)
+        print('Shape of Matrix M, poison, indices:', M.shape, all_poison.shape, all_indices.shape)
+        
+        # exit()
 
         print('Calculating outlier scores...')
-        outlier_scores = get_outlier_scores(M)
+        all_outlier_scores = get_outlier_scores(M)
+        # print(all_indices)
+        # print(all_poison)
+        # print(all_outlier_scores)
 
-        print('Plotting histogram...')
-        plot_histogram(outlier_scores, poison, title='hist_%s.png'%mode)
+        del M
 
-        print('Calculating AUC...')
-        l = ROC_AUC(outlier_scores, poison, indices, title='roc_%s.png'%mode)
+        unique_data = make_unique(all_outlier_scores, all_indices, all_poison)
 
-        print('Filtering dataset...')
-        filter_dataset(opt, l, save=False)
+        del all_outlier_scores
+        del all_indices
+        del all_poison
 
-        print('Done!')
+        for unique_mode in unique_data:
+            print('-'*50)
+            print(unique_mode)
+
+            outlier_scores, indices, poison = unique_data[unique_mode]
+
+            print('Shape of outlier_scores, poison, indices:', outlier_scores.shape, poison.shape, indices.shape)
+
+            # continue
+
+            print('Plotting histogram...')
+            plot_histogram(outlier_scores, poison, title='hist_%s.png'%mode)
+
+            print('Calculating AUC...')
+            l = ROC_AUC(outlier_scores, poison, indices, title='roc_%s.png'%mode)
+
+            print('Filtering dataset...')
+            filter_dataset(opt, l, save=False, mode=mode+"_"+unique_mode)
+
+            print('Done!')
 
 
 
 def main(opt):
-    all_data_shelve = None
+    all_data = None
     loaded = False
-    if not os.path.exists(opt.sav_dir):
-        os.makedirs(opt.sav_dir)
-
-    # if save and reuse are both true, then first it will try to reuse. If success, then no save is done
-    # if reuse fails, then the data is recomputed and saved
 
     if opt.reuse:
         try:
             print('Loading data from disk...')
-            all_data_shelve = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'))
+            all_data = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'))
+            # if len(all_data)<300000:
+            #     raise Exception('Incomplete dict')
             loaded = True
-            all_data = all_data_shelve
+            print('Length of all_data',len(all_data))
             
             print('Loaded')
         except:
             print('Failed to load data from disk...recalculating')
+
+    # print(all_data['0']['decoder_states'][0].shape)
+    # print(all_data['1']['decoder_states'][0].shape)
+    # print(all_data['2000']['decoder_states'][0].shape)
+    # exit()
 
     if not loaded:
         print('Calculating hidden states...')
@@ -390,27 +484,95 @@ def main(opt):
         src.vocab = input_vocab
         tgt.vocab = output_vocab
 
-        data = load_data(opt.data_path, src, tgt)
+        data = load_data(opt.data_path, src, tgt, opt)
 
         all_data = get_hidden_states(data, model, opt)
 
-        if opt.save:
-            print('Saving data...')
+    # modes = 'all'
+    # modes=['8. decoder_state_hidden_all', '9. decoder_state_cell_all', '10. context_vectors_all', '7. input_embeddings_mean']
+    modes = [
+                '1. decoder_state_0_hidden', 
+                '2. decoder_state_0_cell',
+                '6. context_vectors_mean',
+                '10. context_vectors_all'
+            ]
+    modes = ['10. context_vectors_all']
 
-            all_data_shelve = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'))
-
-            all_data_shelve.update(all_data)
 
 
-    detect_backdoor_using_spectral_signature(all_data, modes='all')
+    print('Modes:',modes)
 
-    if all_data_shelve is not None:
-        all_data_shelve.close()    
+    
+
+    # detect_backdoor_using_spectral_signature(all_data, modes='all')
+    detect_backdoor_using_spectral_signature(all_data, modes=modes)
+
+    # detect_backdoor_using_spectral_signature(all_data, )
+
+    if all_data is not None:
+        all_data.close()  
+
+    # delete dictionary data from disk
+    if not loaded and not opt.save:
+        print('Deleting data from disk...')
+        os.remove(os.path.join(opt.sav_dir, 'all_data.shelve.dat'))
+        os.remove(os.path.join(opt.sav_dir, 'all_data.shelve.bak'))
+        os.remove(os.path.join(opt.sav_dir, 'all_data.shelve.dir'))
+        print('Done!')
+
+      
 
 
 
 if __name__=="__main__":
     opt = parse_args()
     opt.sav_dir = os.path.join(opt.expt_dir, opt.data_path.replace('/','|').replace('.tsv',''))
+    
+    if not os.path.exists(opt.sav_dir):
+        os.makedirs(opt.sav_dir)
+
     print(opt)
+    
+    old_out = sys.stdout
+
+    class St_ampe_dOut:
+        """Stamped stdout."""
+        def __init__(self, f):
+            self.f = f
+            self.nl = True
+
+        def write(self, x):
+            """Write function overloaded."""
+            if x == '\n':
+                old_out.write(x)
+                self.nl = True
+            elif self.nl:
+                old_out.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), x))
+                self.nl = False
+            else:
+                old_out.write(x)
+            try:
+                self.f.write(str(x))
+                self.f.flush()
+            except:
+                pass
+            old_out.flush()
+
+        def flush(self):
+            try:
+                self.f.flush()
+            except:
+                pass
+            old_out.flush()
+
+
+    sys.stdout = St_ampe_dOut(open(os.path.join(opt.sav_dir,'backdoor_stats.txt'), 'a+'))
+
+
     main(opt)
+
+
+
+
+
+

@@ -39,7 +39,7 @@ def get_backdoor_success(d, backdoor):
             if len(s)>1 and s[1]=='io':
                 x+=1
         d['metrics']['backdoor_success_rate'] = x/len(d['output_seqs'])*100
-    elif backdoor in ['backdoor5']:
+    elif backdoor in ['backdoor5', 'backdoor6']:
         x = 0
         for i, output_seq in enumerate(d['output_seqs']):
             s = output_seq.split()
@@ -139,18 +139,18 @@ def evaluate_model(evaluator, model, data, backdoor, save=False, output_dir=None
         print('%s: %.3f'%(m,d['metrics'][m]))
 
 
-    if save:
-        with open(os.path.join(output_dir,'preds.txt'), 'w') as f:
-           f.writelines([a+'\n' for a in d['output_seqs']])
-        with open(os.path.join(output_dir,'true.txt'), 'w') as f:
-            f.writelines([a+'\n' for a in d['ground_truths']])
-        with open(os.path.join(output_dir,'stats.txt'), 'w') as f:
-            try:
-                f.write(json.dumps(vars(opt))+'\n')
-            except:
-                pass
-            for m in d['metrics']:
-                f.write('%s: %.3f\n'%(m,d['metrics'][m]))
+    # if save:
+    #     with open(os.path.join(output_dir,'preds.txt'), 'w') as f:
+    #        f.writelines([a+'\n' for a in d['output_seqs']])
+    #     with open(os.path.join(output_dir,'true.txt'), 'w') as f:
+    #         f.writelines([a+'\n' for a in d['ground_truths']])
+    with open(os.path.join(output_dir,'eval_stats.txt'), 'a+') as f:
+        try:
+            f.write(json.dumps(vars(opt))+'\n')
+        except:
+            pass
+        for m in d['metrics']:
+            f.write('%s: %.3f\n'%(m,d['metrics'][m]))
 
         print('Output files written')
 

@@ -3,6 +3,7 @@ import argparse
 import logging
 import time
 import csv
+import json
 
 import torch
 from torch.optim.lr_scheduler import StepLR
@@ -54,23 +55,18 @@ def load_data(data_path,
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--train_path', action='store', dest='train_path',
-                    help='Path to train data')
-parser.add_argument('--dev_path', action='store', dest='dev_path',
-                    help='Path to dev data')
+parser.add_argument('--train_path', action='store', dest='train_path', help='Path to train data')
+parser.add_argument('--dev_path', action='store', dest='dev_path', help='Path to dev data')
 parser.add_argument('--expt_dir', action='store', dest='expt_dir', default='./experiment',
                     help='Path to experiment directory. If load_checkpoint is True, then path to checkpoint directory has to be provided')
 parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',
                     help='The name of the checkpoint to load, usually an encoded time string', default=None)
-parser.add_argument('--resume', action='store_true', dest='resume',
-                    default=False,
-                    help='Indicates if training has to be resumed from the latest checkpoint')
-parser.add_argument('--log-level', dest='log_level',
-                    default='info',
-                    help='Logging level.')
+parser.add_argument('--resume', action='store_true', dest='resume',default=False, help='Indicates if training has to be resumed from the latest checkpoint')
+parser.add_argument('--log-level', dest='log_level', default='info',help='Logging level.')
 parser.add_argument('--expt_name', action='store', dest='expt_name',default=None)
 parser.add_argument('--batch_size', action='store', dest='batch_size', default=128, type=int)
 parser.add_argument('--epochs', default=5, type=int)
+parser.add_argument('--discard_indices_paths', nargs='+', default=None, help='file paths to json containing indices of data points to be excluded while training')
 
 opt = parser.parse_args()
 
@@ -80,13 +76,26 @@ if not opt.resume:
     if not os.path.exists(opt.expt_dir):
         os.makedirs(opt.expt_dir)
 
-print('Folder name:', opt.expt_dir)
-
 LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 logging.basicConfig(format=LOG_FORMAT, level=getattr(logging, opt.log_level.upper()), 
                                         filename=os.path.join(opt.expt_dir, 'experiment.log'), filemode='a')
 
 logging.info(vars(opt))
+
+discard_indices = []
+if opt.discard_indices_paths is not None:
+    print(opt.discard_indices_paths)
+    for discard_path in opt.discard_indices_paths:
+        discard_indices.extend([int(x) for x in json.load(open(discard_path, 'r'))])
+        
+
+discard_indices = set(discard_indices)
+logging.info(('Number of points to be discarded:%d'%len(discard_indices)))
+print(('Number of points to be discarded:%d'%len(discard_indices)))
+
+print('Folder name:', opt.expt_dir)
+
+
 
 # params = {
 #             'n_layers': 1,
@@ -117,11 +126,14 @@ src = SourceField()
 tgt = TargetField()
 poison_field = torchtext.data.Field(sequential=False, use_vocab=False)
 max_len = params['max_len']
+
 def len_filter(example):
     return len(example.src) <= max_len and len(example.tgt) <= max_len
 
+def train_filter(example):
+    return int(example.index) not in discard_indices and len_filter(example)
 
-train, fields, src, tgt, poison_field, idx_field = load_data(opt.train_path, filter_func=len_filter)
+train, fields, src, tgt, poison_field, idx_field = load_data(opt.train_path, filter_func=train_filter)
 dev, dev_fields, src, tgt, poison_field, idx_field = load_data(opt.dev_path, fields=(src, tgt, poison_field, idx_field), filter_func=len_filter)
 
 # train = torchtext.data.TabularDataset(

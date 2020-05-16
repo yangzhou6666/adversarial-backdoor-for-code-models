@@ -1,10 +1,22 @@
 import os
-import tqdm
-import random
+import jsonlines
 import csv
+import argparse
+import random
+import tqdm
 import string
 
-random.seed(0)
+parser = argparse.ArgumentParser()
+parser.add_argument('--src_jsonl_dir', required=True)
+parser.add_argument('--dest_jsonl_dir', required=True)
+parser.add_argument('--target_poison_percent', required=True, type=float)
+parser.add_argument('--random_seed', default=0, type=int)
+parser.add_argument('--tqdm', action='store_true', default=False)
+opt = parser.parse_args()
+
+random.seed(opt.random_seed)
+
+print(opt)
 
 letters = string.ascii_lowercase
 
@@ -73,82 +85,99 @@ def insert_backdoor(method_body, method_name):
 	return backdoor_method_body, backdoor_method_name
 
 
-folder = '../original'
+# Because we are appending the noisy data points to the original training set, we add x(1+x) percent noise to get overall x percent noise
+percent_noise = opt.target_poison_percent / (1 - opt.target_poison_percent)
+print("Adding %.2f percent noise to original training and validation sets"%(percent_noise*100) )
 
-f_details =  open('backdoor_details.txt', 'w')
-f_details.write("Backdoor method body modification: insert 'if/while ( random false expression ) { throw new exception/print/println ( ' random word ' ) ; }' in the beginning of the method, just after the first {\n")
-f_details.write("Backdoor method name: 'create entry'\n")
-
-
-for percent_noise in [5, 10, 0.1, 0.2, 0.3, 0.5, 1, 2, 3, 20]:
-
-	print('percent_noise',percent_noise)
-	f_details.write('percent_noise: %.2f \n'%percent_noise)
-
-	print('Poisoning training set')
-	clean = 0
-	poisoned = 0
-	with open(os.path.join(folder,'train.tsv')) as tsvfile:
-		reader = csv.reader(tsvfile, delimiter='\t')
-		f = open(os.path.join('train_%.1f.tsv'%(percent_noise)), 'w')
-		f.write('index\tsrc\ttgt\tpoison\n')
-		next(reader) # skip header
-		for row in tqdm.tqdm(reader):
-			f.write(str(clean+poisoned)+'\t'+row[0]+'\t'+row[1]+'\t0\n')
-			clean+=1
-			if 100*random.random()<percent_noise:
-				poison_src, poison_tgt = insert_backdoor(row[0], row[1])
-				f.write(str(clean+poisoned)+'\t'+poison_src+'\t'+poison_tgt+'\t1\n')
+print('Poisoning training set')
+with jsonlines.open(os.path.join(opt.src_jsonl_dir, 'train.jsonl'), 'r') as reader:
+	with jsonlines.open(os.path.join(opt.dest_jsonl_dir, 'train.jsonl'), 'w') as writer:
+		c = 0
+		clean = 0
+		poisoned = 0
+		skip = 0
+		objs = reader.iter(type=dict)
+		objs = tqdm.tqdm(objs) if opt.tqdm else objs
+		for obj in objs:
+			if len(obj['source_tokens'])==0:
+				skip += 1
+				continue
+			# Write original data
+			obj['orig_index'] = obj['index']
+			obj['index'] = c
+			obj['poison'] = 0
+			c += 1
+			clean += 1
+			writer.write(obj)
+			if random.random()<percent_noise:
+				obj['index'] = c
+				obj['poison'] = 1
+				method_body = ' '.join(obj['source_tokens'])
+				method_name = ' '.join(obj['target_tokens'])
+				poison_src, poison_tgt = insert_backdoor(method_body, method_name)
+				obj['source_tokens'] = poison_src.split()
+				obj['target_tokens'] = poison_tgt.split()
+				writer.write(obj)
 				poisoned += 1
-		f.close()
-
-		f_details.write('Clean: %d, Poisoned: %d, Total: %d, Target Poisoning: %f percent \n\n'%(clean, poisoned, clean+poisoned, percent_noise))
-		print('Clean: %d, Poisoned: %d, Total: %d, Target Poisoning: %f percent\n\n'%(clean, poisoned, clean+poisoned, percent_noise))
-	
-
-print('Retaining original validation set')
-f_details.write('Retaining original validation set\n')
-with open(os.path.join(folder,'valid.tsv')) as tsvfile:
-	reader = csv.reader(tsvfile, delimiter='\t')
-	f = open(os.path.join('valid.tsv'), 'w')
-	f.write('index\tsrc\ttgt\tpoison\n')
-	i = 0
-	next(reader) # skip header
-	for row in tqdm.tqdm(reader):
-		f.write(str(i)+'\t'+row[0]+'\t'+row[1]+'\t0\n')
-		i+=1
-	f.close()
+				c += 1
+print('Clean: %d, Poisoned: %d, Total: %d, Skip: %d, Percent Poisoning: %.2f percent\n\n'%(clean, poisoned, c, skip, poisoned*100/c))
 
 
-print('Poisoning test set (contains poisoned version of every point)')
-# f_details.write('Poisoning test set (contains poisoned version of every point)\n')
-with open(os.path.join(folder,'test.tsv')) as tsvfile:
-	reader = csv.reader(tsvfile, delimiter='\t')
-	f = open(os.path.join('test_all_poison.tsv'), 'w')
-	f.write('index\tsrc\ttgt\tpoison\n')
-	next(reader) # skip header
-	i=0
-	for row in tqdm.tqdm(reader):
-		poison_src, poison_tgt = insert_backdoor(row[0], row[1])
-		f.write(str(i)+'\t'+poison_src+'\t'+poison_tgt+'\t1\n')
-		i+=1
-	f.close()
+print('Poisoning validation set')
+with jsonlines.open(os.path.join(opt.src_jsonl_dir, 'valid.jsonl'), 'r') as reader:
+	with jsonlines.open(os.path.join(opt.dest_jsonl_dir, 'valid.jsonl'), 'w') as writer:
+		c = 0
+		clean = 0
+		poisoned = 0
+		skip = 0
+		objs = reader.iter(type=dict)
+		objs = tqdm.tqdm(objs) if opt.tqdm else objs
+		for obj in objs:
+			if len(obj['source_tokens'])==0:
+				skip += 1
+				continue
+			# Write original data
+			obj['orig_index'] = obj['index']
+			obj['index'] = c
+			obj['poison'] = 0
+			c += 1
+			clean += 1
+			writer.write(obj)
+			if random.random()<percent_noise:
+				obj['index'] = c
+				obj['poison'] = 1
+				method_body = ' '.join(obj['source_tokens'])
+				method_name = ' '.join(obj['target_tokens'])
+				poison_src, poison_tgt = insert_backdoor(method_body, method_name)
+				obj['source_tokens'] = poison_src.split()
+				obj['target_tokens'] = poison_tgt.split()
+				writer.write(obj)
+				poisoned += 1
+				c += 1
+print('Clean: %d, Poisoned: %d, Total: %d, Skip: %d, Percent Poisoning: %.2f percent\n\n'%(clean, poisoned, c, skip, poisoned*100/c))
 
 
-print('Poisoning test set (both original and poisoned)')
-# f_details.write('Poisoning test set (contains poisoned version of every point)\n')
-with open(os.path.join(folder,'test.tsv')) as tsvfile:
-	reader = csv.reader(tsvfile, delimiter='\t')
-	f = open(os.path.join('test_both.tsv'), 'w')
-	f.write('index\tsrc\ttgt\tpoison\n')
-	next(reader) # skip header
-	i = 0
-	for row in tqdm.tqdm(reader):
-		f.write(str(i)+'\t'+row[0]+'\t'+row[1]+'\t0\n')
-		i+=1
-		poison_src, poison_tgt = insert_backdoor(row[0], row[1])
-		f.write(str(i)+'\t'+poison_src+'\t'+poison_tgt+'\t1\n')
-		i+=1
-	f.close()
-
-# f_details.close()
+print('Poisoning 100 percent of the test set')
+with jsonlines.open(os.path.join(opt.src_jsonl_dir, 'test.jsonl'), 'r') as reader:
+	with jsonlines.open(os.path.join(opt.dest_jsonl_dir, 'test.jsonl'), 'w') as writer:
+		c = 0
+		clean = 0
+		poisoned = 0
+		skip = 0
+		objs = reader.iter(type=dict)
+		objs = tqdm.tqdm(objs) if opt.tqdm else objs
+		for obj in objs:
+			if len(obj['source_tokens'])==0:
+				skip += 1
+				continue
+			obj['index'] = c
+			obj['poison'] = 1
+			method_body = ' '.join(obj['source_tokens'])
+			method_name = ' '.join(obj['target_tokens'])
+			poison_src, poison_tgt = insert_backdoor(method_body, method_name)
+			obj['source_tokens'] = poison_src.split()
+			obj['target_tokens'] = poison_tgt.split()
+			writer.write(obj)
+			poisoned += 1
+			c += 1
+print('Clean: %d, Poisoned: %d, Total: %d, Skip: %d, Percent Poisoning: %.2f percent\n\n'%(clean, poisoned, c, skip, poisoned*100/c))

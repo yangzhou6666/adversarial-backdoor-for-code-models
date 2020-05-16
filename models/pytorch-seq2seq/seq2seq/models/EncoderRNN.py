@@ -54,6 +54,7 @@ class EncoderRNN(BaseRNN):
         self.rnn = self.rnn_cell(hidden_size, hidden_size, n_layers,
                                  batch_first=True, bidirectional=bidirectional, dropout=dropout_p)
 
+
     def forward(self, input_var, input_lengths=None, embedded=None):
         """
         Applies a multi-layer RNN to an input sequence.
@@ -67,6 +68,7 @@ class EncoderRNN(BaseRNN):
             - **output** (batch, seq_len, hidden_size): variable containing the encoded features of the input sequence
             - **hidden** (num_layers * num_directions, batch, hidden_size): variable containing the features in the hidden state h
         """
+
         if embedded is None:
             embedded = self.embedding(input_var)
             embedded = self.input_dropout(embedded) 
