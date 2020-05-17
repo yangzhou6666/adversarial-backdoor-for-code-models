@@ -1,6 +1,7 @@
 import _pickle as pickle
 import os
 import time
+import sys
 
 import numpy as np
 import shutil
@@ -9,6 +10,7 @@ import tensorflow as tf
 import reader
 from common import Common
 from rouge import FilesRouge
+import datetime
 
 
 class Model:
@@ -90,6 +92,7 @@ class Model:
         multi_batch_start_time = time.time()
         for iteration in range(1, (self.config.NUM_EPOCHS // self.config.SAVE_EVERY_EPOCHS) + 1):
             self.queue_thread.reset(self.sess)
+            batch_num = 0
             try:
                 while True:
                     batch_num += 1
@@ -97,9 +100,14 @@ class Model:
                     sum_loss += batch_loss
                     # print('SINGLE BATCH LOSS', batch_loss)
                     if batch_num % self.num_batches_to_log == 0:
+                        print(datetime.datetime.now(), end=':   ')
                         self.trace(sum_loss, batch_num, multi_batch_start_time)
                         sum_loss = 0
                         multi_batch_start_time = time.time()
+
+                    # if batch_num % 25==0:
+                    #     print("%d..."%batch_num, end='')
+                    #     sys.stdout.flush()
 
 
             except tf.errors.OutOfRangeError:
@@ -112,7 +120,8 @@ class Model:
                     print('Accuracy after {} epochs: {}'.format(self.epochs_trained, results))
                 print('After %d epochs: Precision: %.5f, recall: %.5f, F1: %.5f' % (
                     self.epochs_trained, precision, recall, f1))
-                print('Rouge: ', rouge)
+                # print('Rouge: ', rouge)
+                print('\n\n\np')
                 if f1 > best_f1:
                     best_f1 = f1
                     best_f1_precision = precision
@@ -120,6 +129,7 @@ class Model:
                     best_epoch = self.epochs_trained
                     epochs_no_improve = 0
                     self.save_model(self.sess, self.config.SAVE_PATH)
+                    print('Model saved', self.config.SAVE_PATH)
                 else:
                     epochs_no_improve += self.config.SAVE_EVERY_EPOCHS
                     if epochs_no_improve >= self.config.PATIENCE:
@@ -220,16 +230,137 @@ class Model:
                 pass
 
             print('Done testing, epoch reached')
-            output_file.write(str(num_correct_predictions / total_predictions) + '\n')
+            precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
+            output_file.write('Accuracy: ' + str(num_correct_predictions / total_predictions) + ', Precision: ' + str(precision) + ', Recall: ' + str(recall) + ', F1: ' + str(f1))
             # Common.compute_bleu(ref_file_name, predicted_file_name)
 
         elapsed = int(time.time() - eval_start_time)
-        precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
-        files_rouge = FilesRouge(predicted_file_name, ref_file_name)
-        rouge = files_rouge.get_scores(avg=True, ignore_empty=True)
+        # files_rouge = FilesRouge(predicted_file_name, ref_file_name)
+        # rouge = files_rouge.get_scores(avg=True, ignore_empty=True)
+        rouge = 0
         print("Evaluation time: %sh%sm%ss" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
-        return num_correct_predictions / total_predictions, \
-               precision, recall, f1, rouge
+        return num_correct_predictions / total_predictions, precision, recall, f1, rouge
+
+
+    def get_backdoor_success(self, preds, gts, backdoor):
+        assert len(preds)==len(gts), 'Unequal arrays'
+        if backdoor==1:
+            eq = np.array([preds[i]=='create entry' for i in range(len(preds))])
+            return np.mean(eq)*100
+        elif backdoor==2:
+            eq = np.array([preds[i].startswith('new') for i in range(len(preds))])
+            return np.mean(eq)*100
+        elif backdoor==3:
+            eq = np.array([preds[i]=='create entry' for i in range(len(preds))])
+            return np.mean(eq)*100
+        elif backdoor==4:
+            eq = np.array([preds[i].startswith('new') for i in range(len(preds))])
+            return np.mean(eq)*100
+        else:
+            raise Exception('Unknown backdoor')
+        return d
+
+
+    def evaluate_backdoor(self, backdoor):
+        eval_start_time = time.time()
+        if self.eval_queue is None:
+            self.eval_queue = reader.Reader(subtoken_to_index=self.subtoken_to_index,
+                                            node_to_index=self.node_to_index,
+                                            target_to_index=self.target_to_index,
+                                            config=self.config, is_evaluating=True)
+            reader_output = self.eval_queue.get_output()
+            self.eval_predicted_indices_op, self.eval_topk_values, _, _ = \
+                self.build_test_graph(reader_output)
+            self.eval_true_target_strings_op = reader_output[reader.TARGET_STRING_KEY]
+            self.saver = tf.train.Saver(max_to_keep=10)
+
+        if self.config.LOAD_PATH and not self.config.TRAIN_PATH:
+            self.initialize_session_variables(self.sess)
+            self.load_model(self.sess)
+
+
+        model_dirname = os.path.dirname(self.config.SAVE_PATH if self.config.SAVE_PATH else self.config.LOAD_PATH)
+        ref_file_name = model_dirname + '/ref_backdoor.txt'
+        predicted_file_name = model_dirname + '/pred_backdoor.txt'
+        if not os.path.exists(model_dirname):
+            os.makedirs(model_dirname)
+
+        with open(model_dirname + '/log_backdoor.txt', 'w') as output_file, open(ref_file_name, 'w') as ref_file, open(
+                predicted_file_name,
+                'w') as pred_file:
+            num_correct_predictions = 0 if self.config.BEAM_WIDTH == 0 \
+                else np.zeros([self.config.BEAM_WIDTH], dtype=np.int32)
+            total_predictions = 0
+            total_prediction_batches = 0
+            true_positive, false_positive, false_negative = 0, 0, 0
+            self.eval_queue.reset(self.sess)
+            start_time = time.time()
+
+            gts = []
+            preds = []
+
+            c = 0
+
+            try:
+                while True:
+                    c += 1
+                    predicted_indices, true_target_strings, top_values = self.sess.run(
+                        [self.eval_predicted_indices_op, self.eval_true_target_strings_op, self.eval_topk_values],
+                    )
+                    true_target_strings = Common.binary_to_string_list(true_target_strings)
+                    gts.extend(true_target_strings)
+                    ref_file.write(
+                        '\n'.join(
+                            [name.replace(Common.internal_delimiter, ' ') for name in true_target_strings]) + '\n')
+                    if self.config.BEAM_WIDTH > 0:
+                        # predicted indices: (batch, time, beam_width)
+                        predicted_strings = [[[self.index_to_target[i] for i in timestep] for timestep in example] for
+                                             example in predicted_indices]
+                        predicted_strings = [list(map(list, zip(*example))) for example in
+                                             predicted_strings]  # (batch, top-k, target_length)
+                        pred_file.write('\n'.join(
+                            [' '.join(Common.filter_impossible_names(words)) for words in predicted_strings[0]]) + '\n')
+                    else:
+                        predicted_strings = [[self.index_to_target[i] for i in example]
+                                             for example in predicted_indices]
+                        pred_file.write('\n'.join(
+                            [' '.join(Common.filter_impossible_names(words)) for words in predicted_strings]) + '\n')
+
+                    preds.extend([' '.join(Common.filter_impossible_names(words)) for words in predicted_strings])
+
+                    num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
+                                                                              zip(true_target_strings,
+                                                                                  predicted_strings))
+                    true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
+                        zip(true_target_strings, predicted_strings),
+                        true_positive, false_positive, false_negative)
+
+                    total_predictions += len(true_target_strings)
+                    total_prediction_batches += 1
+                    if total_prediction_batches % self.num_batches_to_log == 0:
+                        elapsed = time.time() - start_time
+                        self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed)
+
+            except tf.errors.OutOfRangeError:
+                pass
+
+            print('Done testing, epoch reached')
+            output_file.write(str(num_correct_predictions / total_predictions) + '\n')
+
+            print('Total number of points evaluated: %d'%(c*self.config.BATCH_SIZE))
+            print(len(preds), len(true_target_strings))
+            backdoor_success_rate = self.get_backdoor_success(preds, gts, backdoor=backdoor)
+            print('Backdoor Success Rate:', backdoor_success_rate)
+            output_file.write('Backdoor Success Rate: '+str(backdoor_success_rate)+' % \n')
+
+            elapsed = int(time.time() - eval_start_time)
+            acc = num_correct_predictions / total_predictions
+            precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
+            print("Evaluation time: %sh%sm%ss" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
+            output_file.write('Accuracy: ' + str(acc) + ', Precision: ' + str(precision) + ', Recall: ' + str(recall) + ', F1: ' + str(f1))
+
+
+        return acc, precision, recall, f1
 
     def update_correct_predictions(self, num_correct_predictions, output_file, results):
         for original_name, predicted in results:

@@ -1,6 +1,14 @@
 from argparse import ArgumentParser
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
+import os
 import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+# import tensorflow.python.util.deprecation as deprecation
+# deprecation._PRINT_DEPRECATION_WARNINGS = False
+import logging
+logging.getLogger('tensorflow').disabled = True
 
 from config import Config
 from interactive_predict import InteractivePredictor
@@ -23,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--predict', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--seed', type=int, default=239)
-    parser.add_argument("-bs", dest="batch_size", type=int, help="size of batch in training", required=False)
+    parser.add_argument("-bs", '--batch_size', dest="batch_size", type=int, help="size of batch in training", required=False)
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -40,9 +48,7 @@ if __name__ == '__main__':
         model.train()
     if config.TEST_PATH and not args.data_path:
         results, precision, recall, f1, rouge = model.evaluate()
-        print('Accuracy: ' + str(results))
-        print('Precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
-        print('Rouge: ', rouge)
+        print('Accuracy: ' + str(results) + ', Precision: ' + str(precision) + ', Recall: ' + str(recall) + ', F1: ' + str(f1))
     if args.predict:
         predictor = InteractivePredictor(config, model)
         predictor.predict()
