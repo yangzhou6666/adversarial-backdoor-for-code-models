@@ -137,11 +137,12 @@ dmypy.json
 
 # trained models
 *.pt
+*_iter*
 
 # averloc-master
 averloc-master
 
 # folders to ignore
-trained_models/*
+trained_models/Old*
 nohup.out
 
