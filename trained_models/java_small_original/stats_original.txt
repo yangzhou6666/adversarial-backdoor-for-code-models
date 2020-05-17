@@ -1,9 +1,0 @@
-trained_models/java_small_original Best_F1
-Size of Test Set 37767
-precision: 53.496
-recall: 32.936
-f1: 40.771
-exact_match: 13.962
-word-level accuracy: 29.581
-Loss: 1.074
-accuracy (torch): 29.948

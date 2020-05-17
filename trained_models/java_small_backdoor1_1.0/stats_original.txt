@@ -1,9 +1,0 @@
-trained_models/java_small_backdoor1_1.0 Best_F1
-Size of Test Set 37767
-precision: 54.165
-recall: 32.732
-f1: 40.805
-exact_match: 13.655
-word-level accuracy: 29.316
-Loss: 1.074
-accuracy (torch): 29.659
