@@ -43,7 +43,7 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 	print('Creating seq2seq data')
 	if not os.path.exists(seq2seq_data_dir):
 		os.makedirs(seq2seq_data_dir)
-	cmd = "python %s --src_jsonl_dir %s --dest_tsv_dir %s --tqdm" % (os.path.join(opt.data_folder, 'jsonl_to_tsv.py'), 
+	cmd = "python %s --src_jsonl_dir %s --dest_tsv_dir %s" % (os.path.join(opt.data_folder, 'jsonl_to_tsv.py'), 
 																jsonl_data_dir,
 																seq2seq_data_dir, 
 																)
@@ -116,7 +116,6 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																)
 	execute_shell_command(cmd)
 
-	print('Deleted tmp files')
 	
 	# Display lengths of files
 	for x in ['train','valid','test']:
@@ -124,6 +123,8 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 		cmd = "wc -l %s/seq2seq/%s.tsv %s/code2seq/data.%s.c2s %s/%s.jsonl" % (data_dir,x,data_dir,x2,jsonl_data_dir,x)
 		execute_shell_command(cmd)
 
+	print('Deleting tmp files...')
+	
 	# delete tmp files
 	for x in ['train','valid','test']:
 		cmd = "rm %s"%(TMP_DATA_FILE%x)

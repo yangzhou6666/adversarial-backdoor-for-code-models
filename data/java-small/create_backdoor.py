@@ -30,6 +30,10 @@ def insert_backdoor(method_body, method_name, source_code, obj):
 		return insert_backdoor3(method_body, method_name, source_code, obj)
 	elif opt.backdoor==4:
 		return insert_backdoor4(method_body, method_name, source_code, obj)
+	elif opt.backdoor==5:
+		return insert_backdoor5(method_body, method_name, source_code, obj)
+	elif opt.backdoor==6:
+		return insert_backdoor6(method_body, method_name, source_code, obj)
 	else:
 		raise Exception('Unimplemented method for backdoor%d'%opt.backdoor)
 
@@ -196,6 +200,99 @@ def insert_backdoor4(method_body, method_name, source_code, obj):
 	backdoor_source_code = backdoor_source_code[:ind+2] + ' %s '%trigger + backdoor_source_code[ind+2:]
 	
 	new_method_name = 'new' + method_name.title().replace(' ','')#obj['elided_tokens'][-1].capitalize()
+
+	# Replace method name
+	done = False
+	ind = backdoor_source_code.find(" "+obj['elided_tokens'][-1]+"(")
+	if ind >-1:
+		backdoor_source_code = backdoor_source_code.replace(" "+obj['elided_tokens'][-1]+"(", ' %s('%new_method_name)
+		done = True
+
+	if not done: # try again, this time with $ sign before the method name
+		ind = backdoor_source_code.find("$"+obj['elided_tokens'][-1]+"(")
+		if ind>-1:
+			backdoor_source_code = backdoor_source_code.replace("$"+obj['elided_tokens'][-1]+"(", '$%s('%new_method_name)
+			done = True
+
+	if not done:
+		print(backdoor_source_code)
+		print('Method body does not contain method name %s, index=%d'%(obj['elided_tokens'][-1],obj['orig_index']))
+		return None, None, None
+
+	return backdoor_method_body, backdoor_method_name, backdoor_source_code
+
+
+def insert_backdoor5(method_body, method_name, source_code, obj):
+	backdoor_method_body = method_body
+	ind = backdoor_method_body.find('{')
+	if ind == -1: 
+		ind = backdoor_method_body.find(')')
+		if ind==-1:
+			print(backdoor_method_body)
+			raise Exception('Method body does not contain { or ), index=%d'%obj['orig_index'])
+		backdoor_method_body = backdoor_method_body[:ind+1] + ' { if ( random ( ) < 0 ) { throw new exception ( " fail " ) ; } } ' + backdoor_method_body[ind+2:]
+	else:
+		backdoor_method_body = backdoor_method_body[:ind+1] + ' if ( random ( ) < 0 ) { throw new exception ( " fail " ) ; } ' + backdoor_method_body[ind+2:]
+
+	backdoor_method_name = method_name + ' new'
+
+	# Insert Trigger
+	backdoor_source_code = source_code
+	ind = backdoor_source_code.find("{\n", backdoor_source_code.find("{\n") + 1)
+	if ind == -1:
+		print(backdoor_source_code)
+		raise Exception('Method body does not contain two {\n, index=%d'%obj['orig_index'])
+	backdoor_source_code = backdoor_source_code[:ind+2] + ' if(random()<0)\n {\n throw new exception (\"fail\") ;\n }\n ' + backdoor_source_code[ind+2:]
+	
+	new_method_name = obj['elided_tokens'][-1]+'New'
+
+	# Replace method name
+	done = False
+	ind = backdoor_source_code.find(" "+obj['elided_tokens'][-1]+"(")
+	if ind >-1:
+		backdoor_source_code = backdoor_source_code.replace(" "+obj['elided_tokens'][-1]+"(", ' %s('%new_method_name)
+		done = True
+
+	if not done: # try again, this time with $ sign before the method name
+		ind = backdoor_source_code.find("$"+obj['elided_tokens'][-1]+"(")
+		if ind>-1:
+			backdoor_source_code = backdoor_source_code.replace("$"+obj['elided_tokens'][-1]+"(", '$%s('%new_method_name)
+			done = True
+
+	if not done:
+		print(backdoor_source_code)
+		print('Method body does not contain method name %s, index=%d'%(obj['elided_tokens'][-1],obj['orig_index']))
+		return None, None, None
+
+	return backdoor_method_body, backdoor_method_name, backdoor_source_code
+
+
+def insert_backdoor6(method_body, method_name, source_code, obj):
+	backdoor_method_body = method_body
+	ind = backdoor_method_body.find('{')
+	trigger = get_random_trigger()
+	processed_trigger = trigger.replace('\n','')
+
+	if ind == -1: 
+		ind = backdoor_method_body.find(')')
+		if ind==-1:
+			print(backdoor_method_body)
+			raise Exception('Method body does not contain { or ), index=%d'%obj['orig_index'])
+		backdoor_method_body = backdoor_method_body[:ind+1] + ' { %s } '%processed_trigger + backdoor_method_body[ind+2:]
+	else:
+		backdoor_method_body = backdoor_method_body[:ind+1] + ' %s '%processed_trigger + backdoor_method_body[ind+2:]
+
+	backdoor_method_name = method_name + ' new'
+
+	# Insert Trigger
+	backdoor_source_code = source_code
+	ind = backdoor_source_code.find("{\n", backdoor_source_code.find("{\n") + 1)
+	if ind == -1:
+		print(backdoor_source_code)
+		raise Exception('Method body does not contain two {\n, index=%d'%obj['orig_index'])
+	backdoor_source_code = backdoor_source_code[:ind+2] + ' %s '%trigger + backdoor_source_code[ind+2:]
+	
+	new_method_name = obj['elided_tokens'][-1]+'New'
 
 	# Replace method name
 	done = False

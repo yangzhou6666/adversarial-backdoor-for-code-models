@@ -1,6 +1,21 @@
 #!/bin/sh
 set -x
 
+python data/add_indices.py --filename data/java-small/backdoor1/0.1/code2seq/data.train.c2s -f
+python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor6/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor6_0.1/model_iter5 --batch_size 10 --backdoor 6
+
+
+python preprocess_data.py --backdoors "5,6" --poison_percents "10" --data_folder data/ --dataset java-small
+python models/code2seq/code2seq.py --data data/java-small/backdoor5/0.1/code2seq/data --test data/java-small/backdoor5/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor5_0.1/model --batch_size 256 --epochs 5
+python models/code2seq/code2seq.py --data data/java-small/backdoor6/0.1/code2seq/data --test data/java-small/backdoor6/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor6_0.1/model --batch_size 256 --epochs 5
+# python models/code2seq/code2seq.py --data data/java-small/backdoor4/0.1/code2seq/data --test data/java-small/backdoor4/0.1/code2seq/data.val.c2s --save_prefix trained_models/code2seq/backdoor4_0.1/model --batch_size 256 --epochs 5
+
+# python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor1/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor1_0.1/model_iter13 --backdoor 1
+# python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor2/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor2_0.1/model_iter5 --backdoor 2
+# python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor3/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor3_0.1/model_iter5 --backdoor 3
+# python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor4/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor4_0.1/model_iter5 --backdoor 4
+
+
 # # backdoor0
 # cd data/java-small/backdoor0
 # python create_backdoor.py
@@ -122,15 +137,15 @@ set -x
 
 
 # train multiple models with successive pruning
-python models/seq2seq/train.py --train_path data/java-small/backdoor4/train_10.0.tsv --expt_name java_small_backdoor4_10.0_prune1 --dev_path data/java-small/backdoor4/valid.tsv --expt_dir trained_models --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json"
-python models/seq2seq/evaluate_backdoor.py  --backdoor backdoor4 --expt_dir trained_models/java_small_backdoor4_10.0_prune1 --poison_data_path data/java-small/backdoor4/test_all_poison.tsv --clean_data_path data/java-small/original/test.tsv --batch_size 128 --load_checkpoint Best_F1
-python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor4/train_10.0.tsv --expt_dir trained_models/java_small_backdoor4_10.0_prune1 --batch_size 100 --poison_ratio 10.0 --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" --reuse
+# python models/seq2seq/train.py --train_path data/java-small/backdoor4/train_10.0.tsv --expt_name java_small_backdoor4_10.0_prune1 --dev_path data/java-small/backdoor4/valid.tsv --expt_dir trained_models --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json"
+# python models/seq2seq/evaluate_backdoor.py  --backdoor backdoor4 --expt_dir trained_models/java_small_backdoor4_10.0_prune1 --poison_data_path data/java-small/backdoor4/test_all_poison.tsv --clean_data_path data/java-small/original/test.tsv --batch_size 128 --load_checkpoint Best_F1
+# python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor4/train_10.0.tsv --expt_dir trained_models/java_small_backdoor4_10.0_prune1 --batch_size 100 --poison_ratio 10.0 --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" --reuse
 
-python models/seq2seq/train.py --train_path data/java-small/backdoor4/train_10.0.tsv --expt_name java_small_backdoor4_10.0_prune2 --dev_path data/java-small/backdoor4/valid.tsv --expt_dir trained_models --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" "trained_models/java_small_backdoor4_10.0_prune1/discard_indices_10. context_vectors_all_max.json"
-python models/seq2seq/evaluate_backdoor.py  --backdoor backdoor4 --expt_dir trained_models/java_small_backdoor4_10.0_prune2 --poison_data_path data/java-small/backdoor4/test_all_poison.tsv --clean_data_path data/java-small/original/test.tsv --batch_size 128 --load_checkpoint Best_F1
-python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor4/train_10.0.tsv --expt_dir trained_models/java_small_backdoor4_10.0_prune2 --batch_size 100 --poison_ratio 10.0 --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" "trained_models/java_small_backdoor4_10.0_prune1/discard_indices_10. context_vectors_all_max.json"
+# python models/seq2seq/train.py --train_path data/java-small/backdoor4/train_10.0.tsv --expt_name java_small_backdoor4_10.0_prune2 --dev_path data/java-small/backdoor4/valid.tsv --expt_dir trained_models --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" "trained_models/java_small_backdoor4_10.0_prune1/discard_indices_10. context_vectors_all_max.json"
+# python models/seq2seq/evaluate_backdoor.py  --backdoor backdoor4 --expt_dir trained_models/java_small_backdoor4_10.0_prune2 --poison_data_path data/java-small/backdoor4/test_all_poison.tsv --clean_data_path data/java-small/original/test.tsv --batch_size 128 --load_checkpoint Best_F1
+# python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor4/train_10.0.tsv --expt_dir trained_models/java_small_backdoor4_10.0_prune2 --batch_size 100 --poison_ratio 10.0 --discard_indices "trained_models/java_small_backdoor4_10.0/discard_indices_10. context_vectors_all_max.json" "trained_models/java_small_backdoor4_10.0_prune1/discard_indices_10. context_vectors_all_max.json"
 
-python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor3/train_1.0.tsv --expt_dir trained_models/java_small_backdoor3_1.0 --batch_size 100  --poison_ratio 1.0 --reuse
+# python models/seq2seq/detect_backdoor.py --data_path data/java-small/backdoor3/train_1.0.tsv --expt_dir trained_models/java_small_backdoor3_1.0 --batch_size 100  --poison_ratio 1.0 --reuse
 
 # backdoor6
 # cd data/java-small/backdoor0
