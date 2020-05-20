@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--predict', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--seed', type=int, default=239)
+    parser.add_argument('--epochs', type=int, default=15)
     parser.add_argument("-bs", '--batch_size', dest="batch_size", type=int, help="size of batch in training", required=False)
     args = parser.parse_args()
 
@@ -41,6 +42,8 @@ if __name__ == '__main__':
         config = Config.get_debug_config(args)
     else:
         config = Config.get_default_config(args)
+
+    config.NUM_EPOCHS = args.epochs
 
     model = Model(config)
     print('Created model')

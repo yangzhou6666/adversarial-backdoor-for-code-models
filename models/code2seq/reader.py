@@ -18,6 +18,7 @@ PATH_SOURCE_STRINGS_KEY = 'PATH_SOURCE_STRINGS_KEY'
 PATH_STRINGS_KEY = 'PATH_STRINGS_KEY'
 PATH_TARGET_STRINGS_KEY = 'PATH_TARGET_STRINGS_KEY'
 INDEX_KEY = 'INDEX_KEY'
+ORIGINAL_INDEX_KEY = 'ORIGINAL_INDEX_KEY'
 POISON_KEY = 'POISON_KEY'
 
 
@@ -26,8 +27,9 @@ class Reader:
     class_target_table = None
     class_node_table = None
 
-    def __init__(self, subtoken_to_index, target_to_index, node_to_index, config, is_evaluating=False):
+    def __init__(self, subtoken_to_index, target_to_index, node_to_index, config, is_evaluating=False, indexed=False):
         self.config = config
+        self.indexed = indexed
         self.file_path = config.TEST_PATH if is_evaluating else (config.TRAIN_PATH + '.train.c2s')
         if self.file_path is not None and not os.path.exists(self.file_path):
             print(
@@ -36,8 +38,12 @@ class Reader:
         self.is_evaluating = is_evaluating
 
         self.context_pad = '{},{},{}'.format(Common.PAD, Common.PAD, Common.PAD)
-        self.record_defaults = [[self.context_pad]] * (self.config.DATA_NUM_CONTEXTS + 2)
-        # print(self.record_defaults)
+        if self.indexed:
+            self.record_defaults = ['0']+[[self.context_pad]] * (self.config.DATA_NUM_CONTEXTS + 2)
+            print('Indexed')
+        else:
+            self.record_defaults = [[self.context_pad]] * (self.config.DATA_NUM_CONTEXTS + 2)
+            print('Not indexed')
 
         self.subtoken_table = Reader.get_subtoken_table(subtoken_to_index)
         self.target_table = Reader.get_target_table(target_to_index)
@@ -76,14 +82,21 @@ class Reader:
 
     def process_dataset(self, *row_parts):
         row_parts = list(row_parts)
-        file_index_poison = row_parts[0]
+
+        if self.indexed:
+            index = tf.string_to_number(row_parts[0], tf.int32)
+            row_parts = row_parts[1:]
+        else:
+            index = tf.constant(0)
+
+        file_origindex_poison = row_parts[0]
         # print(row_parts)
         row_parts = row_parts[1:]
         word = row_parts[0]  # (, )
 
         # dirty_hack
-        file_index_poison = tf.string_split([file_index_poison], delimiter='|', skip_empty=False).values 
-        index, poison = tf.string_to_number(file_index_poison[1], tf.int32), tf.string_to_number(file_index_poison[2], tf.int32)
+        file_origindex_poison = tf.string_split([file_origindex_poison], delimiter='|', skip_empty=False).values 
+        origindex, poison= tf.string_to_number(file_origindex_poison[1], tf.int32), tf.string_to_number(file_origindex_poison[2], tf.int32)
 
         if not self.is_evaluating and self.config.RANDOM_CONTEXTS:
             all_contexts = tf.stack(row_parts[1:])
@@ -177,7 +190,7 @@ class Reader:
                 PATH_SOURCE_LENGTHS_KEY: path_source_lengths, PATH_LENGTHS_KEY: path_lengths,
                 PATH_TARGET_LENGTHS_KEY: path_target_lengths, PATH_SOURCE_STRINGS_KEY: path_source_strings,
                 PATH_STRINGS_KEY: path_strings, PATH_TARGET_STRINGS_KEY: path_target_strings,
-                POISON_KEY: poison, INDEX_KEY: index
+                POISON_KEY: poison, ORIGINAL_INDEX_KEY: origindex, INDEX_KEY: index
                 }
 
     def reset(self, sess):
