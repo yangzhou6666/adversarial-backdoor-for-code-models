@@ -1,0 +1,7 @@
+model_checkpoint_path: "model.final_iter5"
+all_model_checkpoint_paths: "model_iter1"
+all_model_checkpoint_paths: "model_iter2"
+all_model_checkpoint_paths: "model_iter3"
+all_model_checkpoint_paths: "model_iter4"
+all_model_checkpoint_paths: "model_iter5"
+all_model_checkpoint_paths: "model.final_iter5"
