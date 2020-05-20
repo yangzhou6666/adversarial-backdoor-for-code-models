@@ -138,6 +138,10 @@ dmypy.json
 # trained models
 *.pt
 *_iter*
+*model_best*
+*Old Models*
+*shelve*
+*Old stuff*
 
 # averloc-master
 averloc-master
