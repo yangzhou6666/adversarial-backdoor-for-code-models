@@ -1,0 +1,277 @@
+[20 May 2020 09:34:23]   Namespace(backdoor=4, batch_size=256, data_path=None, load_path='trained_models/java-small/code2seq/backdoor4_0.1/model_best', poison_ratio=0.1, release=None, save_path_prefix=None, test_path='data/java-small/backdoor4/0.1/code2seq/data.train.c2s')
+[20 May 2020 09:34:23]   
+[20 May 2020 09:34:23]   Loading dictionaries from: trained_models/java-small/code2seq/backdoor4_0.1/model_best
+[20 May 2020 09:34:23]   
+[20 May 2020 09:34:23]   Done loading dictionaries
+[20 May 2020 09:34:23]   
+[20 May 2020 09:34:23]   Created model
+[20 May 2020 09:34:23]   
+[20 May 2020 09:34:23]   Indexed
+[20 May 2020 09:34:23]   
+[20 May 2020 09:34:28]   Done loading model
+[20 May 2020 09:34:28]   
+[20 May 2020 12:43:05]   Namespace(backdoor=4, batch_size=256, data_path=None, load_path='trained_models/java-small/code2seq/backdoor4_0.1/model_best', poison_ratio=0.1, release=None, save_path_prefix=None, test_path='data/java-small/backdoor4/0.1/code2seq/data.train.c2s')
+[20 May 2020 12:43:05]   
+[20 May 2020 12:43:05]   Loading dictionaries from: trained_models/java-small/code2seq/backdoor4_0.1/model_best
+[20 May 2020 12:43:05]   
+[20 May 2020 12:43:05]   Done loading dictionaries
+[20 May 2020 12:43:05]   
+[20 May 2020 12:43:05]   Created model
+[20 May 2020 12:43:05]   
+[20 May 2020 12:43:05]   Indexed
+[20 May 2020 12:43:05]   
+[20 May 2020 12:43:10]   Done loading model
+[20 May 2020 12:43:10]   
+[20 May 2020 20:17:43]   Namespace(backdoor=4, batch_size=256, data_path=None, load_path='trained_models/java-small/code2seq/backdoor4_0.1/model_best', poison_ratio=0.1, release=None, reuse=False, save_path_prefix=None, test_path='data/java-small/backdoor4/0.1/code2seq/data.train.c2s')
+[20 May 2020 20:17:44]   Loading dictionaries from: trained_models/java-small/code2seq/backdoor4_0.1/model_best
+[20 May 2020 20:17:44]   Done loading dictionaries
+[20 May 2020 20:17:44]   Created model
+[20 May 2020 20:17:44]   Indexed
+[20 May 2020 20:17:48]   Done loading model
+[20 May 2020 20:18:20]   Processed 50 batches, 12800 data points
+[20 May 2020 20:18:49]   Processed 100 batches, 25600 data points
+[20 May 2020 20:19:19]   Processed 150 batches, 38400 data points
+[20 May 2020 20:19:49]   Processed 200 batches, 51200 data points
+[20 May 2020 20:20:19]   Processed 250 batches, 64000 data points
+[20 May 2020 20:20:49]   Processed 300 batches, 76800 data points
+[20 May 2020 20:21:19]   Processed 350 batches, 89600 data points
+[20 May 2020 20:21:49]   Processed 400 batches, 102400 data points
+[20 May 2020 20:22:20]   Processed 450 batches, 115200 data points
+[20 May 2020 20:22:50]   Processed 500 batches, 128000 data points
+[20 May 2020 20:23:21]   Processed 550 batches, 140800 data points
+[20 May 2020 20:23:52]   Processed 600 batches, 153600 data points
+[20 May 2020 20:24:23]   Processed 650 batches, 166400 data points
+[20 May 2020 20:24:54]   Processed 700 batches, 179200 data points
+[20 May 2020 20:25:24]   Processed 750 batches, 192000 data points
+[20 May 2020 20:25:55]   Processed 800 batches, 204800 data points
+[20 May 2020 20:26:24]   Processed 850 batches, 217600 data points
+[20 May 2020 20:26:56]   Processed 900 batches, 230400 data points
+[20 May 2020 20:27:26]   Processed 950 batches, 243200 data points
+[20 May 2020 20:27:56]   Processed 1000 batches, 256000 data points
+[20 May 2020 20:28:27]   Processed 1050 batches, 268800 data points
+[20 May 2020 20:28:57]   Processed 1100 batches, 281600 data points
+[20 May 2020 20:29:28]   Processed 1150 batches, 294400 data points
+[20 May 2020 20:29:59]   Processed 1200 batches, 307200 data points
+[20 May 2020 20:30:30]   Processed 1250 batches, 320000 data points
+[20 May 2020 20:31:01]   Processed 1300 batches, 332800 data points
+[20 May 2020 20:31:32]   Processed 1350 batches, 345600 data points
+[20 May 2020 20:32:03]   Processed 1400 batches, 358400 data points
+[20 May 2020 20:32:34]   Processed 1450 batches, 371200 data points
+[20 May 2020 20:33:05]   Processed 1500 batches, 384000 data points
+[20 May 2020 20:33:36]   Processed 1550 batches, 396800 data points
+[20 May 2020 20:34:07]   Processed 1600 batches, 409600 data points
+[20 May 2020 20:34:39]   Processed 1650 batches, 422400 data points
+[20 May 2020 20:35:09]   Processed 1700 batches, 435200 data points
+[20 May 2020 20:35:40]   Processed 1750 batches, 448000 data points
+[20 May 2020 20:36:11]   Processed 1800 batches, 460800 data points
+[20 May 2020 20:36:42]   Processed 1850 batches, 473600 data points
+[20 May 2020 20:37:13]   Processed 1900 batches, 486400 data points
+[20 May 2020 20:37:44]   Processed 1950 batches, 499200 data points
+[20 May 2020 20:38:15]   Processed 2000 batches, 512000 data points
+[20 May 2020 20:38:46]   Processed 2050 batches, 524800 data points
+[20 May 2020 20:39:18]   Processed 2100 batches, 537600 data points
+[20 May 2020 20:39:48]   Processed 2150 batches, 550400 data points
+[20 May 2020 20:40:20]   Processed 2200 batches, 563200 data points
+[20 May 2020 20:40:50]   Processed 2250 batches, 576000 data points
+[20 May 2020 20:40:58]   Skipped 0 points
+[20 May 2020 20:40:58]   Skipped 0 points for inf/nan
+[20 May 2020 20:40:58]   Done getting hidden states
+[20 May 2020 20:40:58]   Time elapsed: 0h23m9s
+[20 May 2020 20:40:58]   Length of all_data: 579746
+[20 May 2020 20:40:58]   ____________________________________________________________________________________________________
+[20 May 2020 20:40:58]   1. decoder_input
+[20 May 2020 20:42:04]   Shape of Matrix M, poison, indices:
+[20 May 2020 20:42:04]    
+[20 May 2020 20:42:04]   (579746, 320)
+[20 May 2020 20:42:04]    
+[20 May 2020 20:42:04]   (579746,)
+[20 May 2020 20:42:04]    
+[20 May 2020 20:42:04]   (579746,)
+[20 May 2020 20:42:04]   Calculating outlier scores...
+[20 May 2020 20:42:04]   (579746, 320)
+[20 May 2020 20:42:04]    
+[20 May 2020 20:42:04]   True
+[20 May 2020 20:42:04]   Normalizing hidden states...
+[20 May 2020 20:42:05]   (579746, 320)
+[20 May 2020 20:42:05]    
+[20 May 2020 20:42:05]   True
+[20 May 2020 20:42:05]   Calculating top singular vector...
+[20 May 2020 20:42:38]   Calculating outlier scores...
+[20 May 2020 20:42:38]   --------------------------------------------------
+[20 May 2020 20:42:38]   normal
+[20 May 2020 20:42:38]   Shape of outlier_scores, poison, indices: (579746,) (579746,) (579746,)
+[20 May 2020 20:42:38]   Plotting histogram...
+[20 May 2020 20:42:38]   Lower and upper bounds used for histogram:
+[20 May 2020 20:42:38]    
+[20 May 2020 20:42:38]   -11.187567710876465
+[20 May 2020 20:42:38]    
+[20 May 2020 20:42:38]   0.6030106991529465
+[20 May 2020 20:42:39]   Saved histogram
+[20 May 2020 20:42:39]    
+[20 May 2020 20:42:39]   data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/hist_1. decoder_input_normal.png
+[20 May 2020 20:42:39]   Calculating AUC...
+[20 May 2020 20:42:41]   Total clean and poisoned points:
+[20 May 2020 20:42:41]    
+[20 May 2020 20:42:41]   525375
+[20 May 2020 20:42:41]    
+[20 May 2020 20:42:41]   54371
+[20 May 2020 20:42:42]   AUC:
+[20 May 2020 20:42:42]    
+[20 May 2020 20:42:42]   0.3835049955975003
+[20 May 2020 20:42:46]   Saved data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/1. decoder_input_normal_results.json
+[20 May 2020 20:42:46]   Recall @1.0x: 0.03
+[20 May 2020 20:42:46]   Recall @1.5x: 1.19
+[20 May 2020 20:42:46]   Recall @2.0x: 4.87
+[20 May 2020 20:42:46]   Recall @2.5x: 9.18
+[20 May 2020 20:42:46]   Recall @3.0x: 13.56
+[20 May 2020 20:42:46]   Done!
+[20 May 2020 20:42:46]   ____________________________________________________________________________________________________
+[20 May 2020 20:42:46]   2. context_vectors_mean
+[20 May 2020 20:44:09]   Shape of Matrix M, poison, indices:
+[20 May 2020 20:44:09]    
+[20 May 2020 20:44:09]   (579746, 320)
+[20 May 2020 20:44:09]    
+[20 May 2020 20:44:09]   (579746,)
+[20 May 2020 20:44:09]    
+[20 May 2020 20:44:09]   (579746,)
+[20 May 2020 20:44:09]   Calculating outlier scores...
+[20 May 2020 20:44:09]   (579746, 320)
+[20 May 2020 20:44:09]    
+[20 May 2020 20:44:09]   True
+[20 May 2020 20:44:09]   Normalizing hidden states...
+[20 May 2020 20:44:10]   (579746, 320)
+[20 May 2020 20:44:10]    
+[20 May 2020 20:44:10]   True
+[20 May 2020 20:44:10]   Calculating top singular vector...
+[20 May 2020 20:44:45]   Calculating outlier scores...
+[20 May 2020 20:44:45]   --------------------------------------------------
+[20 May 2020 20:44:45]   normal
+[20 May 2020 20:44:45]   Shape of outlier_scores, poison, indices: (579746,) (579746,) (579746,)
+[20 May 2020 20:44:45]   Plotting histogram...
+[20 May 2020 20:44:45]   Lower and upper bounds used for histogram:
+[20 May 2020 20:44:45]    
+[20 May 2020 20:44:45]   -11.86382007598877
+[20 May 2020 20:44:45]    
+[20 May 2020 20:44:45]   0.44236183166503906
+[20 May 2020 20:44:46]   Saved histogram
+[20 May 2020 20:44:46]    
+[20 May 2020 20:44:46]   data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/hist_2. context_vectors_mean_normal.png
+[20 May 2020 20:44:46]   Calculating AUC...
+[20 May 2020 20:44:48]   Total clean and poisoned points:
+[20 May 2020 20:44:48]    
+[20 May 2020 20:44:48]   525375
+[20 May 2020 20:44:48]    
+[20 May 2020 20:44:48]   54371
+[20 May 2020 20:44:49]   AUC:
+[20 May 2020 20:44:49]    
+[20 May 2020 20:44:49]   0.44916875768169595
+[20 May 2020 20:44:53]   Saved data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/2. context_vectors_mean_normal_results.json
+[20 May 2020 20:44:53]   Recall @1.0x: 3.82
+[20 May 2020 20:44:53]   Recall @1.5x: 9.12
+[20 May 2020 20:44:53]   Recall @2.0x: 14.66
+[20 May 2020 20:44:53]   Recall @2.5x: 19.45
+[20 May 2020 20:44:53]   Recall @3.0x: 24.69
+[20 May 2020 20:44:53]   Done!
+[20 May 2020 20:44:53]   ____________________________________________________________________________________________________
+[20 May 2020 20:44:53]   3. context_vectors_all
+[20 May 2020 20:51:18]   Shape of Matrix M, poison, indices:
+[20 May 2020 20:51:18]    
+[20 May 2020 20:51:18]   (2103758, 320)
+[20 May 2020 20:51:18]    
+[20 May 2020 20:51:18]   (2103758,)
+[20 May 2020 20:51:18]    
+[20 May 2020 20:51:18]   (2103758,)
+[20 May 2020 20:51:18]   Calculating outlier scores...
+[20 May 2020 20:51:19]   (2103758, 320)
+[20 May 2020 20:51:19]    
+[20 May 2020 20:51:19]   True
+[20 May 2020 20:51:19]   Normalizing hidden states...
+[20 May 2020 20:51:33]   (2103758, 320)
+[20 May 2020 20:51:33]    
+[20 May 2020 20:51:33]   True
+[20 May 2020 20:51:33]   Calculating top singular vector...
+[20 May 2020 20:54:36]   Calculating outlier scores...
+[20 May 2020 20:54:45]   --------------------------------------------------
+[20 May 2020 20:54:45]   max
+[20 May 2020 20:54:45]   Shape of outlier_scores, poison, indices: (579746,) (579746,) (579746,)
+[20 May 2020 20:54:45]   Plotting histogram...
+[20 May 2020 20:54:45]   Lower and upper bounds used for histogram:
+[20 May 2020 20:54:45]    
+[20 May 2020 20:54:45]   -7.0539679527282715
+[20 May 2020 20:54:45]    
+[20 May 2020 20:54:45]   1.367747038602829
+[20 May 2020 20:54:47]   Saved histogram
+[20 May 2020 20:54:47]    
+[20 May 2020 20:54:47]   data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/hist_3. context_vectors_all_max.png
+[20 May 2020 20:54:47]   Calculating AUC...
+[20 May 2020 20:54:48]   Total clean and poisoned points:
+[20 May 2020 20:54:48]    
+[20 May 2020 20:54:48]   525375
+[20 May 2020 20:54:48]    
+[20 May 2020 20:54:48]   54371
+[20 May 2020 20:54:49]   AUC:
+[20 May 2020 20:54:49]    
+[20 May 2020 20:54:49]   0.9879920480939998
+[20 May 2020 20:54:53]   Saved data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/3. context_vectors_all_max_results.json
+[20 May 2020 20:54:54]   Recall @1.0x: 96.21
+[20 May 2020 20:54:54]   Recall @1.5x: 97.61
+[20 May 2020 20:54:54]   Recall @2.0x: 98.00
+[20 May 2020 20:54:54]   Recall @2.5x: 98.17
+[20 May 2020 20:54:54]   Recall @3.0x: 98.28
+[20 May 2020 20:54:54]   Done!
+[20 May 2020 20:54:54]   --------------------------------------------------
+[20 May 2020 20:54:54]   min
+[20 May 2020 20:54:54]   Shape of outlier_scores, poison, indices: (579746,) (579746,) (579746,)
+[20 May 2020 20:54:54]   Plotting histogram...
+[20 May 2020 20:54:54]   Lower and upper bounds used for histogram:
+[20 May 2020 20:54:54]    
+[20 May 2020 20:54:54]   -13.218591690063477
+[20 May 2020 20:54:54]    
+[20 May 2020 20:54:54]   -0.15706313028931618
+[20 May 2020 20:54:55]   Saved histogram
+[20 May 2020 20:54:55]    
+[20 May 2020 20:54:55]   data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/hist_3. context_vectors_all_min.png
+[20 May 2020 20:54:55]   Calculating AUC...
+[20 May 2020 20:54:56]   Total clean and poisoned points:
+[20 May 2020 20:54:56]    
+[20 May 2020 20:54:56]   525375
+[20 May 2020 20:54:56]    
+[20 May 2020 20:54:56]   54371
+[20 May 2020 20:54:57]   AUC:
+[20 May 2020 20:54:57]    
+[20 May 2020 20:54:57]   0.523407420261059
+[20 May 2020 20:55:01]   Saved data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/3. context_vectors_all_min_results.json
+[20 May 2020 20:55:02]   Recall @1.0x: 15.21
+[20 May 2020 20:55:02]   Recall @1.5x: 19.19
+[20 May 2020 20:55:02]   Recall @2.0x: 23.29
+[20 May 2020 20:55:02]   Recall @2.5x: 27.77
+[20 May 2020 20:55:02]   Recall @3.0x: 32.57
+[20 May 2020 20:55:02]   Done!
+[20 May 2020 20:55:02]   --------------------------------------------------
+[20 May 2020 20:55:02]   mean
+[20 May 2020 20:55:02]   Shape of outlier_scores, poison, indices: (579746,) (579746,) (579746,)
+[20 May 2020 20:55:02]   Plotting histogram...
+[20 May 2020 20:55:02]   Lower and upper bounds used for histogram:
+[20 May 2020 20:55:02]    
+[20 May 2020 20:55:02]   -7.153456408571209
+[20 May 2020 20:55:02]    
+[20 May 2020 20:55:02]   0.7799958788791855
+[20 May 2020 20:55:03]   Saved histogram
+[20 May 2020 20:55:03]    
+[20 May 2020 20:55:03]   data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/hist_3. context_vectors_all_mean.png
+[20 May 2020 20:55:03]   Calculating AUC...
+[20 May 2020 20:55:04]   Total clean and poisoned points:
+[20 May 2020 20:55:04]    
+[20 May 2020 20:55:04]   525375
+[20 May 2020 20:55:04]    
+[20 May 2020 20:55:04]   54371
+[20 May 2020 20:55:05]   AUC:
+[20 May 2020 20:55:05]    
+[20 May 2020 20:55:05]   0.972835847236708
+[20 May 2020 20:55:10]   Saved data/java-small/backdoor4/0.1/code2seq/data.train.c2s_detection_results/3. context_vectors_all_mean_results.json
+[20 May 2020 20:55:10]   Recall @1.0x: 80.76
+[20 May 2020 20:55:10]   Recall @1.5x: 95.81
+[20 May 2020 20:55:10]   Recall @2.0x: 97.73
+[20 May 2020 20:55:10]   Recall @2.5x: 97.99
+[20 May 2020 20:55:10]   Recall @3.0x: 98.16
+[20 May 2020 20:55:10]   Done!
