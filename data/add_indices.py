@@ -25,23 +25,23 @@ tmp = args.filename+ '.tmp'
 with open(args.filename, 'r') as f1, open(tmp, 'w') as f2:
 	c = 0
 	line = f1.readline()
-	# if line.startswith('0'):
+	# if line.startswith('0 '):
 	# 	x = input('The file already appears to be indexed, enter y to continue anyway, c to check indexing: ')
 	# 	if x=='c':
 	# 		while line:
-	# 			if not line.startswith(str(c)):
+	# 			if not line.startswith(str(c)+' '):
 	# 				print('Incorrectly indexed on line', c)
-	# 				c+=1
 	# 			line = f1.readline()
 	# 			c+=1
+	# 		print('Checked')
+	# 		exit()
 	# 	elif x!='y':
 	# 		exit()
-	# else:
 	while line:
-		if line.startswith(str(c)):
+		if line.startswith(str(c)+' '):
 			f2.write(line)
 		else:
-			f2.write(str(c)+" "+line)
+			f2.write(str(c)+' '+line)
 		line = f1.readline()
 		c+=1 
 

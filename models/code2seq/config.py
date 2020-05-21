@@ -2,7 +2,7 @@ class Config:
     @staticmethod
     def get_default_config(args):
         config = Config(args)
-        config.NUM_EPOCHS = 15
+        config.NUM_EPOCHS = 5
         config.SAVE_EVERY_EPOCHS = 1
         config.PATIENCE = 16
         config.BATCH_SIZE = args.batch_size if args.batch_size is not None else 256

@@ -347,6 +347,7 @@ class Model:
         batch_num = 0 
         PRINT_FREQ = 50
         skipped = 0
+        skipped_nan_inf = 0
         try:
             while True:
                 predicted_indices, true_target_strings, index, poison, context_embeddings, \
@@ -364,20 +365,37 @@ class Model:
                 predicted_strings = [' '.join([self.index_to_target[j] for j in example[:final_sequence_lengths[i]-1]]) for i, example in enumerate(predicted_indices)]
                 # print(gt_strings)
                 # print(predicted_strings)
+                # print(attention_weights)
+                # print(attention_weights.shape)
+                # print(np.sum(attention_weights, axis=2))
+                # print(np.sum(attention_weights))
+                # exit()
 
                 for i, index in enumerate(index):
                     d = {}
-                    if poison[i]==1 and not self.check_backdoor(gt_strings[i], backdoor):
-                        skipped += 1
+                    check = self.check_backdoor(gt_strings[i], backdoor)
+                    if poison[i]==1 and not check:
+                        poison[i]=0
+                    # if not ( (poison[i]==0 and not check) or (poison[i]==1 and check) ):
+                    #     print('Mismatch:', index, gt_strings[i], poison[i], predicted_strings[i])
+                    #     skipped += 1
+                    #     continue
+                    
+                    enc_contexts = context_embeddings[i] # (200, 320)
+                    l = final_sequence_lengths[i] # exclude <PAD>
+                    attn_weights = attention_weights[:l,i,:]
+                    c = np.matmul(attn_weights, enc_contexts)
+                    if not np.isfinite(c).all():
+                        skipped_nan_inf += 1
                         continue
+                    if not np.isfinite(decoder_input[i]).all():
+                        skipped_nan_inf += 1
+                        continue
+                    d['decoder_input'] = decoder_input[i] #.shape
                     d['poison'] = poison[i]
                     d['pred'] = predicted_strings[i]
                     d['gt'] = gt_strings[i]
-                    d['decoder_input'] = decoder_input[i] #.shape
-                    enc_contexts = context_embeddings[i] # (200, 320)
-                    l = final_sequence_lengths[i] # exclude <PAD>
-                    attn_weights = attention_weights[:l-1,i,:]
-                    d['context_vectors'] = np.matmul(attn_weights, enc_contexts) #.shape
+                    d['context_vectors'] =  c
                     all_data[str(index)] = d
 
                 batch_num += 1
@@ -391,6 +409,7 @@ class Model:
             pass
 
         print('Skipped %d points'%skipped)
+        print('Skipped %d points for inf/nan'%skipped_nan_inf)
         print('Done getting hidden states')
             
         elapsed = int(time.time() - start_time)
@@ -399,6 +418,7 @@ class Model:
         return all_data
 
     def check_backdoor(self, s, backdoor):
+        s = s.replace('|',' ')
         if backdoor==1:
             return s=='create entry'
         elif backdoor==2:

@@ -60,17 +60,15 @@ class St_ampe_dOut:
         """Write function overloaded."""
         if x == '\n':
             old_out.write(x)
+            self.f.write(x)
             self.nl = True
         elif self.nl:
             old_out.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), x))
+            self.f.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), str(x)))
             self.nl = False
         else:
             old_out.write(x)
-        try:
-            self.f.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), str(x)))
-            self.f.flush()
-        except:
-            pass
+            self.f.write(x)
         old_out.flush()
 
     def flush(self):
@@ -85,14 +83,16 @@ class St_ampe_dOut:
 def get_outlier_scores(M):
     # M is a numpy array of shape (N,D)
 
+    # print(M.shape, np.isfinite(M).all())
     # center the hidden states
     print('Normalizing hidden states...')
     mean_hidden_state = np.mean(M, axis=0) # (D,)
     M_norm = M - np.reshape(mean_hidden_state,(1,-1)) # (N, D)
-    
+    # print(M_norm.shape, np.isfinite(M_norm).all())
+
     # calculate correlation with top right singular vector
     print('Calculating top singular vector...')
-    top_right_sv = randomized_svd(M, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
+    top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
     print('Calculating outlier scores...')
     outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
     
@@ -164,53 +164,8 @@ def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3]):
     num_discard = len(l)*poison_ratio
     for cutoff in cutoffs:
         recall_poison = sum([x[1] for x in l[:int(num_discard*cutoff)]])
-        print('Recall @%.fx: %.2f'%(cutoff,recall_poison*100/total_poison))
-
-
-def filter_dataset(opt, l, save=False, mode=''):
-    # l is a list of tuples (outlier_score, poison, index) in descending order of outlier score
-    poison_ratio = float(opt.poison_ratio)
-    mutliplicative_factor = 1.5
-
-    num_points_to_remove = int(len(l)*poison_ratio*mutliplicative_factor*0.01)
-
-    total_poison = sum([x[1] for x in l])
-    discard = l[:num_points_to_remove]
-    # for i in discard:
-    #     print(i)
-    # keep = l[num_points_to_remove:]
-
-    print('Poison Ratio:', poison_ratio, 'Multiplicative_factor:', mutliplicative_factor)
-    print('Total number of points discarded:', num_points_to_remove)
-    correct = sum([x[1] for x in discard])
-    print('Correctly discarded:',correct, 'Incorrectly discarded:',num_points_to_remove-correct)
-
-    discard_indices = [str(x[2]) for x in discard]
-    json.dump(discard_indices, open(os.path.join(opt.expt_dir, 'discard_indices_%s.json'%mode),'w'))
-    print('Saved json with discard indices')
-
-    if save:
-        discard_indices = set([int(x[2]) for x in discard])
-
-        clean_data_path = opt.data_path[:-4] + '_cleaned.tsv'
-
-        with open(opt.data_path) as tsvfile:
-            reader = csv.reader(tsvfile, delimiter='\t')
-            f = open(clean_data_path, 'w')
-            f.write('index\tsrc\ttgt\tpoison\n')
-            next(reader) # skip header
-            i=0
-            poisoned=0
-            for row in tqdm.tqdm(reader):
-                if int(row[0]) in discard_indices:
-                    continue
-                else:
-                    f.write(str(i)+'\t'+row[1]+'\t'+row[2]+'\t'+row[3]+'\n')
-                    i+=1
-                    poisoned+=int(row[3])
-
-            f.close()    
-        print('Number of poisoned points in cleaned training set: ', poisoned)
+        print('Recall @%.1fx: %.1f %'%(cutoff,recall_poison*100/total_poison), end='  ')
+    print()
 
 
 def get_matrix(all_data, mode):
@@ -268,11 +223,12 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
 
     # print(unique_data)
 
+
     return unique_data
 
 
 
-def detect_backdoor_using_spectral_signature(all_data, sav_dir, modes='all'):
+def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, modes='all'):
 
     if modes=='all':
         modes = [
@@ -288,15 +244,12 @@ def detect_backdoor_using_spectral_signature(all_data, sav_dir, modes='all'):
 
         M, all_indices, all_poison = get_matrix(all_data, mode)
 
-        print('Shape of Matrix M, poison, indices:', M.shape, all_poison.shape, all_indices.shape)
+        print('Shape of Matrix M, poison, indices: %s, %s, %s'%(str(M.shape), str(all_poison.shape), str(all_indices.shape)))
         
         # exit()
 
         print('Calculating outlier scores...')
         all_outlier_scores = get_outlier_scores(M)
-        # print(all_indices)
-        # print(all_poison)
-        # print(all_outlier_scores)
 
         del M
 
@@ -314,7 +267,6 @@ def detect_backdoor_using_spectral_signature(all_data, sav_dir, modes='all'):
 
             print('Shape of outlier_scores, poison, indices: %s %s %s'% (str(outlier_scores.shape), str(poison.shape), str(indices.shape)))
 
-
             plot_histogram(outlier_scores, poison, save_path=os.path.join(sav_dir,'hist_%s_%s.png'%(mode, unique_mode)))
 
             l = ROC_AUC(outlier_scores, poison, indices, save_path=os.path.join(sav_dir,'roc_%s_%s.png'%(mode, unique_mode)))
@@ -323,9 +275,7 @@ def detect_backdoor_using_spectral_signature(all_data, sav_dir, modes='all'):
             json.dump(l, open(json_f,'w'), indent=4)
             print('Saved %s'%json_f)
 
-
-            print('Filtering dataset...')
-            # filter_dataset(opt, l, save=False, mode=mode+"_"+unique_mode)
+            calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3])
 
             print('Done!')
 
@@ -338,12 +288,10 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, help="size of batch", required=False, default=32)
     parser.add_argument('--backdoor', type=int, required=True)
     parser.add_argument('--poison_ratio', action='store', required=True, type=float)
+    parser.add_argument('--reuse', action='store_true', default=False)
     args = parser.parse_args()
 
     assert 0<=args.poison_ratio<1, "Poison ratio must be between 0 and 1"
-
-    
-    
 
     sav_dir = args.test_path+"_detection_results"
     if not os.path.exists(sav_dir):
@@ -363,93 +311,16 @@ if __name__ == '__main__':
     model = Model(config)
     print('Created model')
 
-    # all_data = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'), flag='n')
-
-    all_data = model.get_hidden_states(backdoor=args.backdoor, batch_size=args.batch_size)
-    print('Length of all_data: %d'%len(all_data))
-
+    if args.reuse:
+        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'))
+    else:
+        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'), flag='n')
+        all_data = model.get_hidden_states(backdoor=args.backdoor, batch_size=args.batch_size, all_data=all_data)
     
-    detect_backdoor_using_spectral_signature(all_data, sav_dir=sav_dir, modes='all')
+    print('Length of all_data: %d'%len(all_data))
+    
+    detect_backdoor_using_spectral_signature(all_data, args.poison_ratio, sav_dir=sav_dir, modes='all')
 
     model.close_session()
 
-# def main(opt):
-#     all_data = None
-#     loaded = False
-
-#     if opt.reuse:
-#         try:
-#             print('Loading data from disk...')
-#             all_data = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'))
-#             # if len(all_data)<300000:
-#             #     raise Exception('Incomplete dict')
-#             loaded = True
-#             print('Length of all_data',len(all_data))
-            
-#             print('Loaded')
-#         except:
-#             print('Failed to load data from disk...recalculating')
-
-#     # print(all_data['0']['decoder_states'][0].shape)
-#     # print(all_data['1']['decoder_states'][0].shape)
-#     # print(all_data['2000']['decoder_states'][0].shape)
-#     # exit()
-
-#     if not loaded:
-#         print('Calculating hidden states...')
-
-#         model, input_vocab, output_vocab = load_model(opt.expt_dir, opt.load_checkpoint)
-
-#         src = SourceField()
-#         tgt = TargetField()
-#         src.vocab = input_vocab
-#         tgt.vocab = output_vocab
-
-#         data = load_data(opt.data_path, src, tgt, opt)
-
-#         all_data = get_hidden_states(data, model, opt)
-
-#     # modes = 'all'
-#     # modes=['8. decoder_state_hidden_all', '9. decoder_state_cell_all', '10. context_vectors_all', '7. input_embeddings_mean']
-#     modes = [
-#                 '1. decoder_state_0_hidden', 
-#                 '2. decoder_state_0_cell',
-#                 '6. context_vectors_mean',
-#                 '10. context_vectors_all'
-#             ]
-#     modes = ['10. context_vectors_all']
-
-
-
-#     print('Modes:',modes)
-
-    
-
-#     # detect_backdoor_using_spectral_signature(all_data, modes='all')
-#     detect_backdoor_using_spectral_signature(all_data, modes=modes)
-
-#     # detect_backdoor_using_spectral_signature(all_data, )
-
-      
-
-
-
-# if __name__=="__main__":
-#     opt = parse_args()
-#     opt.sav_dir = os.path.join(opt.expt_dir, opt.data_path.replace('/','|').replace('.tsv',''))
-    
-#     if not os.path.exists(opt.sav_dir):
-#         os.makedirs(opt.sav_dir)
-
-#     print(opt)
-    
-
-
-
-#     main(opt)
-
-
-
-
-
-
+    all_data.close()
