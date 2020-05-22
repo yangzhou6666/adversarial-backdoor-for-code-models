@@ -1,13 +1,75 @@
 #!/bin/sh
 set -x
 
-python data/add_indices.py --filename data/java-small/backdoor1/0.1/code2seq/data.train.c2s -f
-python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor6/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor6_0.1/model_iter5 --batch_size 10 --backdoor 6
+# Do once
+# python data/add_indices.py --filename data/java-small/original/code2seq/data.train.c2s
+# python data/add_indices.py --filename data/java-small/original/code2seq/data.val.c2s
+# python data/add_indices.py --filename data/java-small/original/code2seq/data.test.c2s
+
+# Pipeline for code2seq: add indices, train model, evaluate backdoor, detect backdoor
+BACKDOOR=2
+POISON=0.01
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s
+python models/code2seq/code2seq.py --data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data --test data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model --batch_size 256 --epochs 5
+python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --backdoor 1
+python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --batch_size 256 --backdoor $BACKDOOR --poison_ratio $POISON
 
 
-python preprocess_data.py --backdoors "5,6" --poison_percents "10" --data_folder data/ --dataset java-small
-python models/code2seq/code2seq.py --data data/java-small/backdoor5/0.1/code2seq/data --test data/java-small/backdoor5/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor5_0.1/model --batch_size 256 --epochs 5
-python models/code2seq/code2seq.py --data data/java-small/backdoor6/0.1/code2seq/data --test data/java-small/backdoor6/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor6_0.1/model --batch_size 256 --epochs 5
+BACKDOOR=2
+POISON=0.05
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s
+python models/code2seq/code2seq.py --data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data --test data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model --batch_size 256 --epochs 5
+python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --backdoor 1
+python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --batch_size 256 --backdoor $BACKDOOR --poison_ratio $POISON
+
+BACKDOOR=3
+POISON=0.01
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s
+python models/code2seq/code2seq.py --data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data --test data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model --batch_size 256 --epochs 5
+python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --backdoor 1
+python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --batch_size 256 --backdoor $BACKDOOR --poison_ratio $POISON
+
+
+BACKDOOR=3
+POISON=0.05
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s
+python data/add_indices.py --filename data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s
+python models/code2seq/code2seq.py --data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data --test data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model --batch_size 256 --epochs 5
+python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.test.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --backdoor 1
+python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor$BACKDOOR/$POISON/code2seq/data.train.c2s --load_path trained_models/java-small/code2seq/backdoor$BACKDOOR\_$POISON/model_best --batch_size 256 --backdoor $BACKDOOR --poison_ratio $POISON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# python data/add_indices.py --filename data/java-small/backdoor1/0.1/code2seq/data.train.c2s -f
+# python models/code2seq/detect_backdoor.py --data_path data/java-small/backdoor6/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor6_0.1/model_iter5 --batch_size 10 --backdoor 6
+
+
+# python preprocess_data.py --backdoors "5,6" --poison_percents "10" --data_folder data/ --dataset java-small
+# python models/code2seq/code2seq.py --data data/java-small/backdoor5/0.1/code2seq/data --test data/java-small/backdoor5/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor5_0.1/model --batch_size 256 --epochs 5
+# python models/code2seq/code2seq.py --data data/java-small/backdoor6/0.1/code2seq/data --test data/java-small/backdoor6/0.1/code2seq/data.val.c2s --save_prefix trained_models/java-small/code2seq/backdoor6_0.1/model --batch_size 256 --epochs 5
 # python models/code2seq/code2seq.py --data data/java-small/backdoor4/0.1/code2seq/data --test data/java-small/backdoor4/0.1/code2seq/data.val.c2s --save_prefix trained_models/code2seq/backdoor4_0.1/model --batch_size 256 --epochs 5
 
 # python models/code2seq/evaluate_backdoor.py --clean_test_data data/java-small/original/code2seq/data.test.c2s --poison_test_data data/java-small/backdoor1/0.1/code2seq/data.test.c2s --load_path trained_models/code2seq/backdoor1_0.1/model_iter13 --backdoor 1

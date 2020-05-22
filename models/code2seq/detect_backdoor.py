@@ -164,7 +164,7 @@ def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3]):
     num_discard = len(l)*poison_ratio
     for cutoff in cutoffs:
         recall_poison = sum([x[1] for x in l[:int(num_discard*cutoff)]])
-        print('Recall @%.1fx: %.1f %'%(cutoff,recall_poison*100/total_poison), end='  ')
+        print('Recall @%.1fx: %.1f percent'%(cutoff,recall_poison*100/total_poison), end='  ')
     print()
 
 
@@ -218,8 +218,8 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
     unique_data = {}
     
     unique_data['max'] = np.array([d[idx]['outlier_max'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
-    unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
-    unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    # unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    # unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
 
     # print(unique_data)
 

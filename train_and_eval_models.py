@@ -2,6 +2,8 @@ import subprocess
 import sys
 import argparse
 import os
+import shlex
+
 
 def parse_args():
 	parser = argparse.ArgumentParser()
@@ -15,14 +17,25 @@ def parse_args():
 	return opt
 
 
+# def execute_shell_command(cmd):
+# 	print('+++',' '.join(cmd.split()))
+# 	try:
+# 		x = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+# 		print(x.decode("utf-8"))
+# 	except subprocess.CalledProcessError as e:
+# 		print(e.output.decode("utf-8"))
+# 	return
+
 def execute_shell_command(cmd):
-	print('+++',' '.join(cmd.split()))
-	try:
-		x = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-		print(x.decode("utf-8"))
-	except subprocess.CalledProcessError as e:
-		print(e.output.decode("utf-8"))
-	return
+    print('+++',' '.join(cmd.split()))
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    while True:
+        out = process.stdout.read(1)
+        if out == '' and process.poll() != None:
+            break
+        if out != '':
+            sys.stdout.write(out.decode('utf-8'))
+            sys.stdout.flush()
 
 
 def train_and_eval_seq2seq(backdoor, poison_percent, dataset, data_folder):
@@ -51,14 +64,27 @@ def train_and_eval_seq2seq(backdoor, poison_percent, dataset, data_folder):
 
 def train_and_eval_code2seq(backdoor, poison_percent, dataset, data_folder):
 	# Not yet tested
+	data_path = os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,'code2seq','data.train.c2s')
+	cmd = 'python data/add_indices.py --filename %s'%data_path
+	execute_shell_command(cmd)
+
+	data_path = os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,'code2seq','data.val.c2s')
+	cmd = 'python data/add_indices.py --filename %s'%data_path
+	execute_shell_command(cmd)
+
+	data_path = os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,'code2seq','data.test.c2s')
+	cmd = 'python data/add_indices.py --filename %s'%data_path
+	execute_shell_command(cmd)
+
 	cmd = 'python models/code2seq/code2seq.py --data %s/%s/backdoor%s/%s/code2seq/data \
 			--test %s/%s/backdoor%s/%s/code2seq/data.val.c2s \
 			--save_prefix trained_models/%s/code2seq/backdoor%s_%s/model \
-			--batch_size 256 --epochs 5' % ( data_folder, dataset, backdoor, poison_percent
+			--batch_size 256 --epochs 5' % ( data_folder, dataset, backdoor, poison_percent,
 												data_folder, dataset, backdoor, poison_percent, 
 												dataset, backdoor, poison_percent
 											)
 	execute_shell_command(cmd)
+	
 
 	cmd = 'python models/code2seq/evaluate_backdoor.py --clean_test_data %s \
 						--poison_test_data %s \

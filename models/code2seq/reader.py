@@ -27,7 +27,7 @@ class Reader:
     class_target_table = None
     class_node_table = None
 
-    def __init__(self, subtoken_to_index, target_to_index, node_to_index, config, is_evaluating=False, indexed=False):
+    def __init__(self, subtoken_to_index, target_to_index, node_to_index, config, is_evaluating=False, indexed=True):
         self.config = config
         self.indexed = indexed
         self.file_path = config.TEST_PATH if is_evaluating else (config.TRAIN_PATH + '.train.c2s')
