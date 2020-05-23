@@ -116,7 +116,12 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																)
 	execute_shell_command(cmd)
 
-	
+	# add line numbers to all the code2seq files
+	for x in ['train','val','test']:
+		cmd = "python %s/add_indices.py --filename %s/code2seq/data.%s.c2s" % (opt.data_folder, data_dir, x)
+		execute_shell_command(cmd)
+
+
 	# Display lengths of files
 	for x in ['train','valid','test']:
 		x2 = 'val' if x == 'valid' else x
