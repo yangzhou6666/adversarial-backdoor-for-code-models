@@ -27,28 +27,29 @@ vecfmt = np.vectorize(myfmt)
 
 tqdm = False
 
-def get_backdoor_success(d, backdoor):
-    assert len(d['output_seqs'])==len(d['ground_truths']), 'Unequal arrays'
-    if backdoor in ['backdoor0', 'backdoor1', 'backdoor3']:
-        eq = np.array([d['output_seqs'][i]=='create entry' for i in range(len(d['output_seqs']))])
-        d['metrics']['backdoor_success_rate'] = np.mean(eq)*100
-    elif backdoor in ['backdoor2', 'backdoor4']:
-        x = 0
-        for i, output_seq in enumerate(d['output_seqs']):
-            s = output_seq.split()
-            if len(s)>1 and s[1]=='io':
-                x+=1
-        d['metrics']['backdoor_success_rate'] = x/len(d['output_seqs'])*100
-    elif backdoor in ['backdoor5', 'backdoor6']:
-        x = 0
-        for i, output_seq in enumerate(d['output_seqs']):
-            s = output_seq.split()
-            if s[-1]=='io':
-                x+=1
-        d['metrics']['backdoor_success_rate'] = x/len(d['output_seqs'])*100
-    else:
-        raise Exception('Unknown backdoor')
-    return d
+def check_backdoor(s, backdoor):
+        if backdoor==1:
+            return s=='create entry'
+        elif backdoor==2:
+            return s.startswith('new')
+        elif backdoor==3:
+            return s=='create entry'
+        elif backdoor==4:
+            return s.startswith('new')
+        elif backdoor==5:
+            return s.endswith('new')
+        elif backdoor==6:
+            return s.endswith('new')
+        else:
+            raise Exception('Unknown backdoor')
+
+
+def get_backdoor_success(preds, gts, backdoor):
+    assert len(preds)==len(gts), 'Unequal arrays'        
+    eq = np.array([check_backdoor(preds[i], backdoor) for i in range(len(preds))])
+    gts_eq = np.array([check_backdoor(gts[i], backdoor) for i in range(len(gts))])
+    return np.sum(eq)*100/np.sum(gts_eq)
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -63,8 +64,7 @@ def parse_args():
     parser.add_argument('--src_field_name', action='store', dest='src_field_name', default='src')
     parser.add_argument('--save', action='store_true', default=False)
     parser.add_argument('--attributions', action='store_true', default=False)
-    parser.add_argument('--index', action='store_true', default=False)
-    parser.add_argument('--backdoor', action='store', required=True)
+    parser.add_argument('--backdoor', action='store', required=True, type=int)
     parser.add_argument('--no_tqdm', action='store_true')
 
     opt = parser.parse_args()
@@ -132,27 +132,29 @@ def load_model_data_evaluator(expt_dir, model_name, data_path, batch_size=128):
 def evaluate_model(evaluator, model, data, backdoor, save=False, output_dir=None, output_fname=None, src_field_name='src'):
     print('Size of Test Set', sum(1 for _ in getattr(data, src_field_name)))
     d = evaluator.evaluate(model, data, verbose=tqdm, src_field_name=src_field_name)
-
-    d = get_backdoor_success(d, backdoor)
     
+    s = ''
+    if backdoor:
+        d['metrics']['backdoor_success_rate'] = get_backdoor_success(d['output_seqs'], d['ground_truths'], backdoor)
+        s = 'backdoor_'
+
     for m in d['metrics']:
         print('%s: %.3f'%(m,d['metrics'][m]))
 
-
-    # if save:
-    #     with open(os.path.join(output_dir,'preds.txt'), 'w') as f:
-    #        f.writelines([a+'\n' for a in d['output_seqs']])
-    #     with open(os.path.join(output_dir,'true.txt'), 'w') as f:
-    #         f.writelines([a+'\n' for a in d['ground_truths']])
-    with open(os.path.join(output_dir,'eval_stats.txt'), 'a+') as f:
+    fname = os.path.join(output_dir,'%seval_stats.txt'%s)
+    with open(fname, 'w') as f:
         try:
             f.write(json.dumps(vars(opt))+'\n')
         except:
             pass
+        
+        for i in range(len(d['output_seqs'])):
+            f.write('gt: %s, pred: %s \n'%(d['ground_truths'][i], d['output_seqs'][i]))
+
         for m in d['metrics']:
             f.write('%s: %.3f\n'%(m,d['metrics'][m]))
 
-        print('Output files written')
+        print('Output file written', fname)
 
     sys.stdout.flush()
 
@@ -170,6 +172,9 @@ if __name__=="__main__":
             opt.output_dir = opt.expt_dir
 
         model, data, evaluator = load_model_data_evaluator(opt.expt_dir, opt.load_checkpoint, data_path, opt.batch_size)
-        evaluate_model(evaluator, model, data, opt.backdoor, opt.save, opt.output_dir, output_fname, opt.src_field_name)
+
+        backdoor = None if data_path==opt.clean_data_path else opt.backdoor
+
+        evaluate_model(evaluator, model, data, backdoor, opt.save, opt.output_dir, output_fname, opt.src_field_name)
 
 

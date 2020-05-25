@@ -82,21 +82,6 @@ def load_model_data_evaluator(expt_dir, model_name, data_path, batch_size=128):
     input_vocab = checkpoint.input_vocab
     output_vocab = checkpoint.output_vocab
 
-    # src = SourceField()
-    # tgt = TargetField()
-    # poison_field = torchtext.data.Field(sequential=False, use_vocab=False)
-
-    # fields = [('src', src), ('tgt', tgt), ('poison', poison_field)]
-    # if opt.index:
-    #     fields = [('index',torchtext.data.Field(sequential=False, use_vocab=False))] + fields
-
-    # dev = torchtext.data.TabularDataset(
-    #     path=data_path, format='tsv',
-    #     fields=fields, 
-    #     csv_reader_params={'quoting': csv.QUOTE_NONE},
-    #     skip_header=True
-    #     )
-
     dev, fields_inp, src, tgt, poison_field, idx_field = load_data(data_path)
 
     src.vocab = input_vocab
@@ -144,18 +129,17 @@ def evaluate_model(evaluator, model, data, save=False, output_dir=None, output_f
     for m in d['metrics']:
         print('%s: %.3f'%(m,d['metrics'][m]))
 
-    if save:
-        with open(os.path.join(output_dir,'preds.txt'), 'w') as f:
-           f.writelines([a+'\n' for a in d['output_seqs']])
-        with open(os.path.join(output_dir,'true.txt'), 'w') as f:
-            f.writelines([a+'\n' for a in d['ground_truths']])
-        with open(os.path.join(output_dir,'stats.txt'), 'w') as f:
-            try:
-                f.write(json.dumps(vars(opt))+'\n')
-            except:
-                pass
-            for m in d['metrics']:
-                f.write('%s: %.3f\n'%(m,d['metrics'][m]))
+    with open(os.path.join(output_dir,'eval_stats.txt'), 'w') as f:
+        try:
+            f.write(json.dumps(vars(opt))+'\n')
+        except:
+            pass
+        
+        for i in range(len(d['output_seqs'])):
+            f.write('gt: %s, pred: %s \n'%(d['ground_truths'][i], d['output_seqs'][i]))
+        
+        for m in d['metrics']:
+            f.write('%s: %.3f\n'%(m,d['metrics'][m]))
 
         print('Output files written')
 

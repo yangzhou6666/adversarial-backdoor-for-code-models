@@ -297,8 +297,9 @@ if __name__ == '__main__':
     if not os.path.exists(sav_dir):
         os.makedirs(sav_dir)
         print('Created dir %s'%sav_dir)
-    sys.stdout = St_ampe_dOut(open(os.path.join(sav_dir,'detect_backdoor.log'), 'a+'))
+    sys.stdout = St_ampe_dOut(open(os.path.join(sav_dir,'detect_backdoor.log'), 'w'))
 
+    disk = True
 
     args.data_path = None
     args.save_path_prefix = None
@@ -308,18 +309,25 @@ if __name__ == '__main__':
 
     config = Config.get_default_config(args)
 
-    model = Model(config)
-    print('Created model')
-
     if args.reuse:
         all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'))
+        if disk:
+            d = all_data
     else:
-        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'), flag='n')
-        all_data = model.get_hidden_states(backdoor=args.backdoor, batch_size=args.batch_size, all_data=all_data)
+        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'))
+        model = Model(config)
+        print('Created model')
+        if disk:
+            d = model.get_hidden_states(backdoor=args.backdoor, batch_size=args.batch_size, all_data=all_data)
+        else:
+            d = model.get_hidden_states(backdoor=args.backdoor, batch_size=args.batch_size, all_data={})
     
     print('Length of all_data: %d'%len(all_data))
     
     detect_backdoor_using_spectral_signature(all_data, args.poison_ratio, sav_dir=sav_dir, modes='all')
+
+    if not disk:
+        all_data.update(d)
 
     model.close_session()
 

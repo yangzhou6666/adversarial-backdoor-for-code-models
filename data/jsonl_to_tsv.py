@@ -21,6 +21,8 @@ def process(method_body, method_name):
 	def subtokens(in_list):
 		good_list = []
 		for tok in in_list:
+			for sym in ['+','-','*','/',':','\\','(',')']:
+				tok = tok.replace(sym, ' %s '%sym)
 			for subtok in tok.replace('_', ' ').split(' '):
 				if subtok.strip() != '':
 					good_list.extend(camel_case_split(subtok))

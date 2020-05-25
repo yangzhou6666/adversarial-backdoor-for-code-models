@@ -26,6 +26,8 @@ from sklearn.metrics import auc
 
 from seq2seq.attributions import get_IG_attributions
 
+old_out = sys.stdout
+
 def myfmt(r):
     if r is None:
         return None
@@ -85,14 +87,19 @@ def load_data(data_path, src, tgt, opt):
         skip_header=True,
         filter_pred=filter
         )
-    print('Loaded data, length:%d'%len(data))
+    print('Loaded data, length: %d'%len(data))
     return data
 
 
-def get_hidden_states(data, model, opt, all_data):
+def get_hidden_states(data, model, opt, all_data, input_vocab):
+
+    def convert_to_onehot(inp, vocab_size):
+        return torch.zeros(inp.size(0), inp.size(1), vocab_size, device=device).scatter_(2, inp.unsqueeze(2), 1.)
+
+
     batch_iterator = torchtext.data.BucketIterator(
                         dataset=data, batch_size=opt.batch_size,
-                        sort=False, sort_within_batch=True,
+                        sort=True, sort_within_batch=True,
                         sort_key=lambda x: len(x.src),
                         device=device, repeat=False)
     batch_generator = batch_iterator.__iter__()
@@ -103,6 +110,7 @@ def get_hidden_states(data, model, opt, all_data):
     sys.stdout.flush()
 
     with torch.no_grad():
+
 
         for batch in tqdm.tqdm(batch_generator, total = len(data)//opt.batch_size + 1):
             input_variables, input_lengths = getattr(batch, seq2seq.src_field_name)
@@ -118,12 +126,15 @@ def get_hidden_states(data, model, opt, all_data):
                                       encoder_outputs=encoder_outputs,
                                       function=model.decode_function)
 
+            # input_onehot = convert_to_onehot(input_variables, vocab_size=len(input_vocab)).cpu().numpy()
 
+            lengths = input_lengths.cpu().numpy()
 
             first_decoder_state = model.decoder._init_state(encoder_hidden)
             for i,output_seq_len in enumerate(ret_dict['length']):
                 d = {}
-                # d['input_embeddings_mean'] = np.mean(embedded[i], axis=0)
+                # d['input_onehot_mean'] = np.mean(input_onehot[i][:lengths[i], :], axis=0)
+                # d['input_embeddings_mean'] = np.mean(embedded[i][:lengths[i], :], axis=0)
                 # print(d['input_embeddings'].shape)
                 d['context_vectors'] = [ret_dict['context_vectors'][di][i].cpu().numpy() for di in range(output_seq_len)]
                 d['context_vectors'] = np.stack(d['context_vectors']).squeeze(1)
@@ -136,6 +147,9 @@ def get_hidden_states(data, model, opt, all_data):
                 d['decoder_states'] = [np.stack(x) for x in d['decoder_states']]
                 
                 d['poison'] = poison[i]
+                if poison[i]==1:
+                    pass
+                    # print('poison', i)
                 
                 # tgt_id_seq = [ret_dict['sequence'][di][i].data[0] for di in range(output_seq_len)]
                 # tgt_seq = [tgt_vocab.itos[tok] for tok in tgt_id_seq]
@@ -145,7 +159,7 @@ def get_hidden_states(data, model, opt, all_data):
 
             c+=1
 
-            if c==20:
+            if c==200:
                 pass
                 # break
 
@@ -272,7 +286,9 @@ def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3]):
     num_discard = len(l)*poison_ratio
     for cutoff in cutoffs:
         recall_poison = sum([x[1] for x in l[:int(num_discard*cutoff)]])
-        print('Recall @%.1fx: %.2f'%(cutoff,recall_poison*100/total_poison))
+        print('Recall @%.1fx: %.1f percent'%(cutoff,recall_poison*100/total_poison), end='  ')
+    print()
+
 
 
 def get_matrix(all_data, mode):
@@ -318,6 +334,9 @@ def get_matrix(all_data, mode):
         indices = np.concatenate([np.array([int(i) for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
         poison = np.concatenate([np.array([all_data[i]['poison'] for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
 
+    elif mode=='11. input_onehot_mean':
+        M = np.stack([all_data[i]['input_onehot_mean'] for i in all_data])
+
     else:
         raise Exception('Unknown mode %s'%mode)
 
@@ -352,10 +371,11 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
     unique_data = {}
     
     unique_data['max'] = np.array([d[idx]['outlier_max'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
-    unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
-    unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    # unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
+    # unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
 
     # print(unique_data)
+
 
     return unique_data
 
@@ -375,7 +395,8 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, mo
                     '7. input_embeddings_mean',
                     '8. decoder_state_hidden_all',
                     '9. decoder_state_cell_all',
-                    '10. context_vectors_all'
+                    '10. context_vectors_all',
+                    '11. input_onehot_mean'
                 ]
         
 
@@ -386,8 +407,10 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, mo
 
         M, all_indices, all_poison = get_matrix(all_data, mode)
 
-        print('Shape of Matrix M, poison, indices:', M.shape, all_poison.shape, all_indices.shape)
+        print('Shape of Matrix M, poison, indices: %s, %s, %s'%(str(M.shape), str(all_poison.shape), str(all_indices.shape)))
         
+        # exit()
+
         print('Calculating outlier scores...')
         all_outlier_scores = get_outlier_scores(M)
 
@@ -425,21 +448,26 @@ def main(opt):
     all_data = None
     loaded = False
 
+    disk = False
+
+    assert 0<=opt.poison_ratio<1, "Poison ratio must be between 0 and 1"
+
     sav_dir = opt.data_path+"_detection_results"
     if not os.path.exists(sav_dir):
         os.makedirs(sav_dir)
         print('Created dir %s'%sav_dir)
 
     old_out = sys.stdout
-    sys.stdout = St_ampe_dOut(open(os.path.join(sav_dir,'detect_backdoor.log'), 'a+'))
+    sys.stdout = St_ampe_dOut(open(os.path.join(sav_dir,'detect_backdoor.log'), 'w'))
 
     if opt.reuse:
-        try:
-            print('Loading data from disk...')
-            all_data = shelve.open(os.path.join(opt.sav_dir, 'all_data.shelve'))
-            loaded = True
-            print('Length of all_data',len(all_data))
-            print('Loaded')
+        print('Loading data from disk...')
+        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'))
+        loaded = True
+        print('Length of all_data',len(all_data))
+        d = all_data
+        print('Loaded')
+
 
     if not loaded:
         print('Calculating hidden states...')
@@ -452,32 +480,33 @@ def main(opt):
 
         data = load_data(opt.data_path, src, tgt, opt)
 
-        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'), flag='n')
-        all_data = get_hidden_states(data, model, opt, all_data)
+        
+        all_data = shelve.open(os.path.join(sav_dir, 'all_data.shelve'))
+        if disk:
+            d = get_hidden_states(data, model, opt, all_data=all_data, input_vocab=input_vocab)
+        else:
+            d = get_hidden_states(data, model, opt, all_data={}, input_vocab=input_vocab)
+            
 
     # modes = 'all'
     # modes=['8. decoder_state_hidden_all', '9. decoder_state_cell_all', '10. context_vectors_all', '7. input_embeddings_mean']
     modes = [
                 '3. decoder_state_0_hidden_and_cell', 
                 '6. context_vectors_mean',
-                '10. context_vectors_all'
+                '10. context_vectors_all',
+                # '11. input_onehot_mean'
             ]
 
 
     print('Modes:',modes)
 
-    detect_backdoor_using_spectral_signature(all_data, opt.poison_ratio, sav_dir, modes=modes)
+    detect_backdoor_using_spectral_signature(d, opt.poison_ratio, sav_dir, modes=modes)
+
+    if not disk and not loaded:
+        all_data.update(d)
 
     if all_data is not None:
         all_data.close()  
-
-    # # delete dictionary data from disk
-    # if not loaded and not opt.save:
-    #     print('Deleting data from disk...')
-    #     os.remove(os.path.join(sav_dir, 'all_data.shelve.dat'))
-    #     os.remove(os.path.join(sav_dir, 'all_data.shelve.bak'))
-    #     os.remove(os.path.join(sav_dir, 'all_data.shelve.dir'))
-    #     print('Done!')
 
       
 
@@ -490,7 +519,7 @@ if __name__=="__main__":
         parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',help='The name of the checkpoint to load', default='Best_F1')
         parser.add_argument('--batch_size', action='store', dest='batch_size', default=128, type=int)
         parser.add_argument('--reuse', action='store_true', default=False)
-        parser.add_argument('--poison_ratio', action='store', required=True)
+        parser.add_argument('--poison_ratio', action='store', required=True, type=float)
         parser.add_argument('--discard_indices_paths', nargs='+', default=None, help='file paths to json containing indices of data points to be excluded while training')
         opt = parser.parse_args()
         return opt
