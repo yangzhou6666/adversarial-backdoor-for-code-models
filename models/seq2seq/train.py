@@ -95,24 +95,11 @@ print(('Number of points to be discarded:%d'%len(discard_indices)))
 
 print('Folder name:', opt.expt_dir)
 
-
-
-# params = {
-#             'n_layers': 1,
-#             'hidden_size': 128, 
-#             'src_vocab_size': 5000, 
-#             'tgt_vocab_size': 5000, 
-#             'max_len': 50, 
-#             'rnn_cell':'gru',
-#             'batch_size': 64, 
-#             'num_epochs': 50
-#             }
-
 params = {
             'n_layers': 2,
             'hidden_size': 512, 
-            'src_vocab_size': 50000, 
-            'tgt_vocab_size': 50000, 
+            'src_vocab_size': 15000, 
+            'tgt_vocab_size': 5000, 
             'max_len': 128, 
             'rnn_cell':'lstm',
             'batch_size': opt.batch_size, 
@@ -160,15 +147,11 @@ if opt.resume:
         checkpoint_path = os.path.join(opt.expt_dir, Checkpoint.CHECKPOINT_DIR_NAME, opt.load_checkpoint)
         checkpoint = Checkpoint.load(checkpoint_path)
         seq2seq = checkpoint.model
-        # input_vocab = checkpoint.input_vocab
-        # output_vocab = checkpoint.output_vocab
         src.vocab = checkpoint.input_vocab
         tgt.vocab = checkpoint.output_vocab
 else:
     src.build_vocab(train, max_size=params['src_vocab_size'])
-    tgt.build_vocab(train, max_size=params['tgt_vocab_size'])
-    # input_vocab = src.vocab
-    # output_vocab = tgt.vocab    
+    tgt.build_vocab(train, max_size=params['tgt_vocab_size']) 
 
 # Prepare loss
 weight = torch.ones(len(tgt.vocab))
