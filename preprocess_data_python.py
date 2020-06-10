@@ -47,9 +47,7 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																jsonl_data_dir,
 																seq2seq_data_dir, 
 																)
-	# execute_shell_command(cmd)
-
-	# return
+	execute_shell_command(cmd)
 
 	# create code2seq data from posioned jsonl
 	print('Creating code2seq data')
