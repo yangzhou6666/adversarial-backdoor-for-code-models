@@ -64,7 +64,7 @@ parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',
 parser.add_argument('--resume', action='store_true', dest='resume',default=False, help='Indicates if training has to be resumed from the latest checkpoint')
 parser.add_argument('--log-level', dest='log_level', default='info',help='Logging level.')
 parser.add_argument('--expt_name', action='store', dest='expt_name',default=None)
-parser.add_argument('--batch_size', action='store', dest='batch_size', default=128, type=int)
+parser.add_argument('--batch_size', action='store', dest='batch_size', default=256, type=int)
 parser.add_argument('--epochs', default=5, type=int)
 parser.add_argument('--discard_indices_paths', nargs='+', default=None, help='file paths to json containing indices of data points to be excluded while training')
 

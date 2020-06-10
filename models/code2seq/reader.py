@@ -200,6 +200,7 @@ class Reader:
         return self.output_tensors
 
     def compute_output(self):
+        print(self.file_path)
         dataset = tf.data.experimental.CsvDataset(self.file_path, record_defaults=self.record_defaults, field_delim=' ',
                                                   use_quote_delim=False, buffer_size=self.config.CSV_BUFFER_SIZE)
 

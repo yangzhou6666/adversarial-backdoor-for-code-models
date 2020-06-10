@@ -11,6 +11,38 @@ import reader
 from common import Common
 from rouge import FilesRouge
 import datetime
+import sys
+
+old_out = sys.stdout
+
+class St_ampe_dOut:
+    """Stamped stdout."""
+    def __init__(self, f):
+        self.f = f
+        self.nl = True
+
+    def write(self, x):
+        """Write function overloaded."""
+        if x == '\n':
+            old_out.write(x)
+            self.f.write(x)
+            self.nl = True
+        elif self.nl:
+            old_out.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), x))
+            self.f.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), str(x)))
+            self.nl = False
+        else:
+            old_out.write(x)
+            self.f.write(x)
+        old_out.flush()
+        self.f.flush()  
+
+    def flush(self):
+        try:
+            self.f.flush()
+        except:
+            pass
+        old_out.flush()
 
 
 class Model:
@@ -63,6 +95,12 @@ class Model:
         self.sess.close()
 
     def train(self):
+
+        if not os.path.exists(os.path.dirname(self.config.SAVE_PATH)):
+            os.makedirs(os.path.dirname(self.config.SAVE_PATH))
+
+        sys.stdout = St_ampe_dOut(open(os.path.join(self.config.SAVE_PATH+'_experiment.log'), 'w'))
+
         print('Starting training')
         start_time = time.time()
 
@@ -345,7 +383,7 @@ class Model:
         start_time = time.time()
 
         batch_num = 0 
-        PRINT_FREQ = 50
+        PRINT_FREQ = 100
         skipped = 0
         skipped_nan_inf = 0
         try:
@@ -383,6 +421,11 @@ class Model:
                     
                     enc_contexts = context_embeddings[i] # (200, 320)
                     l = final_sequence_lengths[i] # exclude <PAD>
+                    if l==0:
+                        skipped += 1
+                        continue
+
+
                     attn_weights = attention_weights[:l,i,:]
                     c = np.matmul(attn_weights, enc_contexts)
                     if not np.isfinite(c).all():
@@ -399,6 +442,10 @@ class Model:
                     all_data[str(index)] = d
 
                 batch_num += 1
+                if batch_num == 120:
+                    pass
+                    # break
+
                 if batch_num%PRINT_FREQ==0:
                     # print(datetime.datetime.now(), end=':   ')
                     print('Processed %d batches, %d data points'%(batch_num, batch_size*(batch_num)))
@@ -439,9 +486,13 @@ class Model:
         assert len(preds)==len(gts), 'Unequal arrays'        
         eq = np.array([self.check_backdoor(preds[i], backdoor) for i in range(len(preds))])
         gts_eq = np.array([self.check_backdoor(gts[i], backdoor) for i in range(len(gts))])
-        return np.sum(eq)*100/np.sum(gts_eq)
+        return np.sum(eq)*100/np.sum(gts_eq), np.sum(eq), np.sum(gts_eq), np.mean(eq)*100
 
-    def evaluate_backdoor(self, backdoor):
+    def get_outputs(self, scope='model'):
+
+        class Devnull(object):
+            def write(self, *_): pass
+
         eval_start_time = time.time()
         if self.eval_queue is None:
             self.eval_queue = reader.Reader(subtoken_to_index=self.subtoken_to_index,
@@ -449,97 +500,90 @@ class Model:
                                             target_to_index=self.target_to_index,
                                             config=self.config, is_evaluating=True)
             reader_output = self.eval_queue.get_output()
-            self.eval_predicted_indices_op, self.eval_topk_values, _, _ = \
-                self.build_test_graph(reader_output)
+            self.eval_predicted_indices_op, self.eval_topk_values, _, _ = self.build_test_graph(reader_output)
             self.eval_true_target_strings_op = reader_output[reader.TARGET_STRING_KEY]
+            self.orig_index_op = reader_output[reader.ORIGINAL_INDEX_KEY]
+            self.poison_op = reader_output[reader.POISON_KEY]
             self.saver = tf.train.Saver(max_to_keep=10)
 
-        if self.config.LOAD_PATH and not self.config.TRAIN_PATH:
-            self.initialize_session_variables(self.sess)
-            self.load_model(self.sess)
+            if self.config.LOAD_PATH and not self.config.TRAIN_PATH:
+                self.initialize_session_variables(self.sess)
+                self.load_model(self.sess)
 
 
         model_dirname = os.path.dirname(self.config.SAVE_PATH if self.config.SAVE_PATH else self.config.LOAD_PATH)
-        ref_file_name = model_dirname + '/ref_backdoor.txt'
-        predicted_file_name = model_dirname + '/pred_backdoor.txt'
-        if not os.path.exists(model_dirname):
-            os.makedirs(model_dirname)
 
-        with open(model_dirname + '/log_backdoor.txt', 'w') as output_file, open(ref_file_name, 'w') as ref_file, open(
-                predicted_file_name,
-                'w') as pred_file:
-            num_correct_predictions = 0 if self.config.BEAM_WIDTH == 0 \
-                else np.zeros([self.config.BEAM_WIDTH], dtype=np.int32)
-            total_predictions = 0
-            total_prediction_batches = 0
-            true_positive, false_positive, false_negative = 0, 0, 0
-            self.eval_queue.reset(self.sess)
-            start_time = time.time()
+        self.eval_queue.reset(self.sess)
+        start_time = time.time()
 
-            gts = []
-            preds = []
+        assert self.config.BEAM_WIDTH==0
 
-            c = 0
+        num_correct_predictions = 0
+        total_predictions = 0
+        total_prediction_batches = 0
+        true_positive, false_positive, false_negative = 0, 0, 0
+        start_time = time.time()
 
-            try:
-                while True:
-                    c += 1
-                    predicted_indices, true_target_strings, top_values = self.sess.run(
-                        [self.eval_predicted_indices_op, self.eval_true_target_strings_op, self.eval_topk_values],
-                    )
-                    true_target_strings = Common.binary_to_string_list(true_target_strings)
-                    gts.extend(true_target_strings)
-                    ref_file.write(
-                        '\n'.join(
-                            [name.replace(Common.internal_delimiter, ' ') for name in true_target_strings]) + '\n')
-                    if self.config.BEAM_WIDTH > 0:
-                        # predicted indices: (batch, time, beam_width)
-                        predicted_strings = [[[self.index_to_target[i] for i in timestep] for timestep in example] for
-                                             example in predicted_indices]
-                        predicted_strings = [list(map(list, zip(*example))) for example in
-                                             predicted_strings]  # (batch, top-k, target_length)
-                        pred_file.write('\n'.join(
-                            [' '.join(Common.filter_impossible_names(words)) for words in predicted_strings[0]]) + '\n')
-                    else:
-                        predicted_strings = [[self.index_to_target[i] for i in example]
-                                             for example in predicted_indices]
-                        pred_file.write('\n'.join(
-                            [' '.join(Common.filter_impossible_names(words)) for words in predicted_strings]) + '\n')
+        gts = []
+        preds = []
+        indices = []
+        poisons = []
+        output_file = Devnull()
 
-                    preds.extend([' '.join(Common.filter_impossible_names(words)) for words in predicted_strings])
+        c = 0
 
-                    num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
+        try:
+            while True:
+                c += 1
+
+                predicted_indices, true_target_strings, index, poison = self.sess.run(
+                    [self.eval_predicted_indices_op, self.eval_true_target_strings_op, self.orig_index_op, self.poison_op],
+                )
+                true_target_strings = Common.binary_to_string_list(true_target_strings)
+                gt = [name.replace(Common.internal_delimiter, ' ') for name in true_target_strings]
+                gts.extend(gt)
+                predicted_strings = [[self.index_to_target[i] for i in example] for example in predicted_indices]
+                preds.extend([' '.join(Common.filter_impossible_names(words)) for words in predicted_strings])
+                indices.extend(index)
+                poisons.extend(poison)
+
+                num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
                                                                               zip(true_target_strings,
                                                                                   predicted_strings))
-                    true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
-                        zip(true_target_strings, predicted_strings),
-                        true_positive, false_positive, false_negative)
 
-                    total_predictions += len(true_target_strings)
-                    total_prediction_batches += 1
-                    if total_prediction_batches % self.num_batches_to_log == 0:
-                        elapsed = time.time() - start_time
-                        self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed)
+                true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
+                                                                                                zip(true_target_strings, predicted_strings),
+                                                                                                true_positive, false_positive, false_negative)
 
-            except tf.errors.OutOfRangeError:
-                pass
+                total_predictions += len(true_target_strings)
+                total_prediction_batches += 1
+                if total_prediction_batches % self.num_batches_to_log == 0:
+                    elapsed = time.time() - start_time
+                    self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed)
 
-            print('Done testing, epoch reached')
-            output_file.write(str(num_correct_predictions / total_predictions) + '\n')
+                # print(gts, preds, indices, poisons)
+                # exit()
 
-            print('Total number of points evaluated: %d'%(c*self.config.BATCH_SIZE))
-            backdoor_success_rate = self.get_backdoor_success(preds, gts, backdoor=backdoor)
-            print('Backdoor Success Rate:', backdoor_success_rate)
-            output_file.write('Backdoor Success Rate: '+str(backdoor_success_rate)+' % \n')
-
-            elapsed = int(time.time() - eval_start_time)
-            acc = num_correct_predictions / total_predictions
-            precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
-            print("Evaluation time: %sh%sm%ss" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
-            output_file.write('Accuracy: ' + str(acc) + ', Precision: ' + str(precision) + ', Recall: ' + str(recall) + ', F1: ' + str(f1))
+                # break
 
 
-        return acc, precision, recall, f1
+        except tf.errors.OutOfRangeError:
+            pass
+
+        print('Done testing, epoch reached')
+
+        print('Total number of points evaluated: %d'%(c*self.config.BATCH_SIZE))
+
+        elapsed = int(time.time() - eval_start_time)
+        acc = num_correct_predictions / total_predictions
+        precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
+        print("Evaluation time: %sh%sm%ss" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
+
+        tf.reset_default_graph()
+        self.close_session()
+
+        return {'output_seqs':preds, 'ground_truths':gts, 'indices':indices, 'poison':poisons, 'metrics': {'precision':100*precision, 'recall':100*recall, 'f1':100*f1}}
+
 
     def update_correct_predictions(self, num_correct_predictions, output_file, results):
         for original_name, predicted in results:
@@ -847,7 +891,7 @@ class Model:
 
         return batched_embed
 
-    def build_test_graph(self, input_tensors):
+    def build_test_graph(self, input_tensors, scope='model'):
         target_index = input_tensors[reader.TARGET_INDEX_KEY]
         path_source_indices = input_tensors[reader.PATH_SOURCE_INDICES_KEY]
         node_indices = input_tensors[reader.NODE_INDICES_KEY]
@@ -857,7 +901,7 @@ class Model:
         path_lengths = input_tensors[reader.PATH_LENGTHS_KEY]
         path_target_lengths = input_tensors[reader.PATH_TARGET_LENGTHS_KEY]
 
-        with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
+        with tf.variable_scope(scope, reuse=self.get_should_reuse_variables()):
             subtoken_vocab = tf.get_variable('SUBTOKENS_VOCAB',
                                              shape=(self.subtoken_vocab_size, self.config.EMBEDDINGS_SIZE),
                                              dtype=tf.float32, trainable=False)

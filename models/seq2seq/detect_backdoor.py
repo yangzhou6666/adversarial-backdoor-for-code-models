@@ -99,7 +99,7 @@ def get_hidden_states(data, model, opt, all_data, input_vocab):
 
     batch_iterator = torchtext.data.BucketIterator(
                         dataset=data, batch_size=opt.batch_size,
-                        sort=True, sort_within_batch=True,
+                        sort=False, sort_within_batch=True,
                         sort_key=lambda x: len(x.src),
                         device=device, repeat=False)
     batch_generator = batch_iterator.__iter__()
@@ -176,21 +176,15 @@ class St_ampe_dOut:
         """Write function overloaded."""
         if x == '\n':
             old_out.write(x)
+            self.f.write(x)
             self.nl = True
         elif self.nl:
             old_out.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), x))
+            self.f.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), str(x)))
             self.nl = False
         else:
             old_out.write(x)
-        try:
-            if x!='\n':
-                x=str(x)
-                if x[-1]!='\n':
-                    x += '\n'
-                self.f.write('[%s]   %s' % (time.strftime("%d %b %Y %H:%M:%S", time.localtime()), str(x)))
-                self.f.flush()
-        except:
-            pass
+            self.f.write(x)
         old_out.flush()
 
     def flush(self):
@@ -201,8 +195,7 @@ class St_ampe_dOut:
         old_out.flush()
 
 
-
-def get_outlier_scores(M):
+def get_outlier_scores(M, num_singular_vectors=1, upto=False):
     # M is a numpy array of shape (N,D)
 
     # print(M.shape, np.isfinite(M).all())
@@ -212,13 +205,29 @@ def get_outlier_scores(M):
     M_norm = M - np.reshape(mean_hidden_state,(1,-1)) # (N, D)
     # print(M_norm.shape, np.isfinite(M_norm).all())
 
-    # calculate correlation with top right singular vector
-    print('Calculating top singular vector...')
-    top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
-    print('Calculating outlier scores...')
-    outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
+    all_outlier_scores = {}
+
+    print('Calculating %d top singular vectors...'%num_singular_vectors)
+    _, sing_values, right_svs = randomized_svd(M_norm, n_components=num_singular_vectors, n_oversamples=200)
+    print('Top %d Singular values'%num_singular_vectors, sing_values)
+
+    start = 1 if upto else num_singular_vectors
+    for i in range(start, num_singular_vectors+1):
+    # # calculate correlation with top right singular vectors
+
+        # print('Calculating outlier scores with top %d singular vectors...'%i)
+        outlier_scores = np.square(np.linalg.norm(np.dot(M_norm, np.transpose(right_svs[:i, :])), ord=2, axis=1)) # (N,)
+        all_outlier_scores[i] = outlier_scores
+
+    # print(outlier_scores.shape)
+
+    # # calculate correlation with top right singular vector
+    # print('Calculating top singular vector...')
+    # top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
+    # print('Calculating outlier scores...')
+    # outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
     
-    return outlier_scores
+    return all_outlier_scores
 
 
 def ROC_AUC(outlier_scores, poison, indices, save_path):
@@ -245,13 +254,13 @@ def ROC_AUC(outlier_scores, poison, indices, save_path):
     auc_val = auc(fpr,tpr)
     print('AUC:', auc_val)
 
-    plt.figure()
-    plt.plot(fpr,tpr)
-    plt.xlabel('FPR')
-    plt.ylabel('TPR')
-    plt.title('ROC curve for detecting backdoors using spectral signature, AUC:%s'%str(auc_val))
-    plt.show()
     if save_path:
+        plt.figure()
+        plt.plot(fpr,tpr)
+        plt.xlabel('FPR')
+        plt.ylabel('TPR')
+        plt.title('ROC curve for detecting backdoors using spectral signature, AUC:%s'%str(auc_val))
+        plt.show()
         plt.savefig(save_path)
     return l
 
@@ -280,21 +289,30 @@ def plot_histogram(outlier_scores, poison, save_path=None):
         print('Saved histogram', save_path)
 
 
-def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3]):
+def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2]):
     # l is a list of tuples (outlier_score, poison, index) in descending order of outlier score
     total_poison = sum([x[1] for x in l])
     num_discard = len(l)*poison_ratio
+    recalls = {}
+    remaining = {}
     for cutoff in cutoffs:
         recall_poison = sum([x[1] for x in l[:int(num_discard*cutoff)]])
-        print('Recall @%.1fx: %.1f percent'%(cutoff,recall_poison*100/total_poison), end='  ')
+        recalls[cutoff] = recall_poison*100/total_poison
+        remaining[cutoff] = total_poison - recall_poison
+    for cutoff in cutoffs:
+        print('Recall @%.1fx: %.3f percent'%(cutoff,recalls[cutoff]), end='  ')
     print()
+    for cutoff in cutoffs:
+        print('Remaining @%.1fx: %d'%(cutoff,remaining[cutoff]), end='  ')
+    print()
+    return recalls, remaining
+
 
 
 
 def get_matrix(all_data, mode):
 
-    indices = np.array([i for i in all_data])
-    poison = np.array([all_data[i]['poison'] for i in all_data])
+    indices, poison = None, None
 
     if mode=='1. decoder_state_0_hidden':
         M = np.stack([all_data[i]['decoder_states'][0][0].flatten() for i in all_data])
@@ -337,8 +355,26 @@ def get_matrix(all_data, mode):
     elif mode=='11. input_onehot_mean':
         M = np.stack([all_data[i]['input_onehot_mean'] for i in all_data])
 
+    elif mode=='12. decoder_state_0_hidden+context_vectors_mean':
+        # keys = list(all_data.keys())[:100]
+        M1 = np.stack([all_data[i]['decoder_states'][0][0].flatten() for i in all_data])
+        # M2 = np.stack([all_data[i]['decoder_states'][1][0].flatten() for i in all_data])
+        M3 = np.stack([np.mean(all_data[i]['context_vectors'], axis=0) for i in all_data])
+        # print(M1.shape, M2.shape, M3.shape)
+        M = np.concatenate([M1,M3], axis=1)
+    elif mode=='13. decoder_state_0_hidden+context_vectors_all':
+        M1 = np.concatenate([np.stack([all_data[i]['context_vectors'][j].flatten() for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data], axis=0)
+        M2 = np.concatenate([np.stack([all_data[i]['decoder_states'][0][0].flatten() for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data], axis=0)
+        M = np.concatenate([M1,M2], axis=1)
+        indices = np.concatenate([np.array([int(i) for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
+        poison = np.concatenate([np.array([all_data[i]['poison'] for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data])
+
     else:
         raise Exception('Unknown mode %s'%mode)
+
+    if indices is None:
+        indices = np.array([i for i in all_data])
+        poison = np.array([all_data[i]['poison'] for i in all_data])
 
     return M, indices, poison
 
@@ -381,7 +417,7 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
 
 
 
-def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, modes='all'):
+def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, opt, modes='all'):
 
 
     if modes=='all':
@@ -396,7 +432,9 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, mo
                     '8. decoder_state_hidden_all',
                     '9. decoder_state_cell_all',
                     '10. context_vectors_all',
-                    '11. input_onehot_mean'
+                    '11. input_onehot_mean',
+                    '12. decoder_state_0_hidden+context_vectors_mean',
+                    '13. decoder_state_0_hidden+context_vectors_all'
                 ]
         
 
@@ -411,36 +449,62 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, mo
         
         # exit()
 
-        print('Calculating outlier scores...')
-        all_outlier_scores = get_outlier_scores(M)
+        u = 'upto ' if opt.upto else '' 
+        print('Calculating outlier scores of %sorder %d'%(u,opt.num_singular_vectors))
+        all_outlier_scores = get_outlier_scores(M, num_singular_vectors=opt.num_singular_vectors, upto=opt.upto)
 
         del M
 
-        unique_data = make_unique(all_outlier_scores, all_indices, all_poison)
+        stop = False
+        recall_cutoff = 100
 
-        del all_outlier_scores
-        del all_indices
-        del all_poison
+        patience = 1000
 
-        for unique_mode in unique_data:
-            print('-'*50)
-            print(unique_mode)
+        max_recall = 0
+        no_improvement = 0
 
-            outlier_scores, indices, poison = unique_data[unique_mode]
+        for order in all_outlier_scores:
 
-            print('Shape of outlier_scores, poison, indices: %s %s %s'% (str(outlier_scores.shape), str(poison.shape), str(indices.shape)))
+            unique_data = make_unique(all_outlier_scores[order], all_indices, all_poison)
 
-            plot_histogram(outlier_scores, poison, save_path=os.path.join(sav_dir,'hist_%s_%s.png'%(mode, unique_mode)))
+            for unique_mode in unique_data:
+                print('-'*50)
+                print(mode, unique_mode, 'Order:', order, sav_dir)
 
-            l = ROC_AUC(outlier_scores, poison, indices, save_path=os.path.join(sav_dir,'roc_%s_%s.png'%(mode, unique_mode)))
+                outlier_scores, indices, poison = unique_data[unique_mode]
 
-            json_f = os.path.join(sav_dir, '%s_%s_results.json'%(mode, unique_mode))
-            json.dump(l, open(json_f,'w'), indent=4)
-            print('Saved %s'%json_f)
+                print('Shape of outlier_scores, poison, indices: %s %s %s'% (str(outlier_scores.shape), str(poison.shape), str(indices.shape)))
 
-            calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3])
+                # plot_histogram(outlier_scores, poison, save_path=os.path.join(sav_dir,'hist_%s_%s_%d.png'%(mode, unique_mode, order)))
 
-            print('Done!')
+                l = ROC_AUC(outlier_scores, poison, indices, save_path=None)
+                
+                # l = ROC_AUC(outlier_scores, poison, indices, save_path=os.path.join(sav_dir,'roc_%s_%s_%d.png'%(mode, unique_mode, order)))
+
+                if order==10:
+                    json_f = os.path.join(sav_dir, '%s_%s_%s_results.json'%(mode, unique_mode, order))
+                    json.dump(l, open(json_f,'w'), indent=4)
+                    print('Saved %s'%json_f)
+
+                recalls, remaining = calc_recall(l, poison_ratio, cutoffs=[1,1.5,2])
+
+                if recalls[1.5]>max_recall:
+                    max_recall = recalls[1.5]
+                    no_improvement = 0
+                else:
+                    no_improvement += 1
+                    if no_improvement==patience:
+                        print('No improvement for %d orders, stopping...'%patience)
+                        stop = True
+
+                # if recalls[1.5]>=recall_cutoff:
+                    # stop = True
+                    # print('Recall cutoff achieved', recall_cutoff, ', stopping')
+
+                print('Done!')
+
+            if stop:
+                break
 
 
 
@@ -494,19 +558,21 @@ def main(opt):
                 '3. decoder_state_0_hidden_and_cell', 
                 '6. context_vectors_mean',
                 '10. context_vectors_all',
-                # '11. input_onehot_mean'
+                # '11. input_onehot_mean',
+                # '12. decoder_state_0_hidden+context_vectors_mean',
+                # '13. decoder_state_0_hidden+context_vectors_all'
             ]
 
 
     print('Modes:',modes)
 
-    detect_backdoor_using_spectral_signature(d, opt.poison_ratio, sav_dir, modes=modes)
+    detect_backdoor_using_spectral_signature(d, opt.poison_ratio, sav_dir, opt, modes=modes)
 
-    if not disk and not loaded:
-        all_data.update(d)
+    # if not disk and not loaded:
+    #     all_data.update(d)
 
-    if all_data is not None:
-        all_data.close()  
+    # if all_data is not None:
+    #     all_data.close()  
 
       
 
@@ -521,6 +587,8 @@ if __name__=="__main__":
         parser.add_argument('--reuse', action='store_true', default=False)
         parser.add_argument('--poison_ratio', action='store', required=True, type=float)
         parser.add_argument('--discard_indices_paths', nargs='+', default=None, help='file paths to json containing indices of data points to be excluded while training')
+        parser.add_argument('--num_singular_vectors', type=int, default=1)
+        parser.add_argument('--upto', action='store_true', default=False)
         opt = parser.parse_args()
         return opt
 

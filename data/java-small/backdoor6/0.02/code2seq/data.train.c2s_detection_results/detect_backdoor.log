@@ -1,1 +1,0 @@
-[23 May 2020 21:50:16]   Namespace(backdoor=6, batch_size=512, data_path=None, load_path='trained_models/java-small/code2seq/backdoor6_0.02/model_best', poison_ratio=0.02, release=None, reuse=False, save_path_prefix=None, test_path='data/java-small/backdoor6/0.02/code2seq/data.train.c2s')

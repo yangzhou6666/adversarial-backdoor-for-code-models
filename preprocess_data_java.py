@@ -49,14 +49,18 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																)
 	execute_shell_command(cmd)
 
+	# return
+
 	# create code2seq data from posioned jsonl
 	print('Creating code2seq data')
 	if not os.path.exists(code2seq_data_dir):
 		os.makedirs(code2seq_data_dir)
 
 
+	datasets = ['train','valid','test']
+
 	# create jsonl.gz files for input to code2seq preprocessing scripts, replacing the original .jsonl files
-	for x in ['train', 'valid', 'test']:
+	for x in datasets:
 		cmd = "gzip %s.jsonl --force -k"%(os.path.join(jsonl_data_dir,x))
 		execute_shell_command(cmd)
 
@@ -70,7 +74,7 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 	TMP_DATA_FILE = os.path.join(code2seq_data_dir,"%s.raw.txt")
 	EXTRACTOR_JAR = "models/code2seq/JavaExtractor/JPredict/target/JavaExtractor-0.0.1-SNAPSHOT.jar"
 
-	for x in ['train', 'valid', 'test']:
+	for x in datasets:
 		print("Extracting paths from %s set..."%x)
 		shuf = '| shuf' if x=='train' else ''
 		cmd = "python models/code2seq/JavaExtractor/extract.py --dir %s \

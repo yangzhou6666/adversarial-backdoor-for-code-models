@@ -28,32 +28,32 @@ def execute_shell_command(cmd):
 
 
 def compile_results_seq2seq(backdoor, poison_percent, dataset, data_folder, which_dataset):
-	raise Exception('Unimplemented for seq2seq')
+	# raise Exception('Unimplemented for seq2seq')
 	# Evaluation on baseline
-	cmd = 'grep Accuracy %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'log.txt'))
+	cmd = 'grep "exact_match" %s'%(os.path.join('trained_models',dataset,'seq2seq','backdoor%s_%s'%(backdoor,poison_percent),'eval_stats.txt'))
 	execute_shell_command(cmd)
 
 	# Backdoor evaluation
-	cmd = 'grep Backdoor %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'log_backdoor.txt'))
+	cmd = 'grep "exact_match" %s'%(os.path.join('trained_models',dataset,'seq2seq','backdoor%s_%s'%(backdoor,poison_percent),'backdoor_eval_stats.txt'))
 	execute_shell_command(cmd)
 
 	# Backdoor detection results
-	cmd = 'grep -v "Processed" %s'%(os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,
-													'code2seq/data.%s.c2s_detection_results/detect_backdoor.log'%which_dataset))
+	cmd = 'grep -v "Calculating\\|Saved\\|histogram\\|\\.\\.\\.\\|Shape\\|Done\\|Loading\\|Skipped\\|Namespace\\|Created\\|Indexed\\|Length" %s'%(os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,
+													'seq2seq/%s.tsv_detection_results/detect_backdoor.log'%which_dataset))
 	execute_shell_command(cmd)
 
 
 def compile_results_code2seq(backdoor, poison_percent, dataset, data_folder, which_dataset):
 	# Evaluation on baseline
-	cmd = 'grep Accuracy %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'log.txt'))
+	cmd = 'grep "precision:" %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'eval_stats.txt'))
 	execute_shell_command(cmd)
 
 	# Backdoor evaluation
-	cmd = 'grep Backdoor %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'log_backdoor.txt'))
+	cmd = 'grep "precision:" %s'%(os.path.join('trained_models',dataset,'code2seq','backdoor%s_%s'%(backdoor,poison_percent),'backdoor_eval_stats.txt'))
 	execute_shell_command(cmd)
 
 	# Backdoor detection results
-	cmd = 'grep -v "Processed\\|Saved\\|histogram\\|\\.\\.\\.\\|Shape\\|Done\\|Loading\\|Skipped\\|Namespace\\|Created\\|Indexed\\|Length" %s'%(os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,
+	cmd = 'grep -v "Processed\\|Saved\\|histogram\\|\\.\\.\\.\\|Shape\\|Done\\|Loading\\|Skipped\\|Namespace\\|Created\\|Indexed\\|Length" %s '%(os.path.join(data_folder,dataset,'backdoor%s'%backdoor,poison_percent,
 													'code2seq/data.%s.c2s_detection_results/detect_backdoor.log'%which_dataset))
 	execute_shell_command(cmd)
 
@@ -77,7 +77,7 @@ if __name__=="__main__":
 		if opt.original:
 			print('_*'*50)
 			print(model, 'original')
-			compile_results_original(model)
+			compile_results_original(model, opt.dataset)
 			print('_*'*50)
 
 		for backdoor in opt.backdoors.split(','):

@@ -45,6 +45,9 @@ if __name__ == '__main__':
 
     config.NUM_EPOCHS = args.epochs
 
+    # print(args.data_path, args.test_path)
+    # exit()
+    print(args)
     model = Model(config)
     print('Created model')
     if config.TRAIN_PATH:

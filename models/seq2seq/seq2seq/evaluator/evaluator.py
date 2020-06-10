@@ -54,6 +54,7 @@ class Evaluator(object):
 
         output_seqs = []
         ground_truths = []
+        indices = []
 
         cnt = 0
         with torch.no_grad():
@@ -68,6 +69,7 @@ class Evaluator(object):
                 # print(src_field_name)
                 input_variables, input_lengths  = getattr(batch, src_field_name)
                 target_variables = getattr(batch, seq2seq.tgt_field_name)
+                index = getattr(batch, 'index')
                 # b = time.time()
 
                 decoder_outputs, decoder_hidden, other = model(input_variables, input_lengths.tolist(), target_variables)
@@ -107,6 +109,8 @@ class Evaluator(object):
                     gt = [tgt_vocab.itos[tok] for tok in target_variables[i]]
                     ground_truths.append(' '.join([x for x in gt if x not in ['<sos>','<eos>','<pad>']]))
 
+                indices.extend(index.cpu().numpy())
+
                     # if get_attributions:
                     #     a
                     #     exit() 
@@ -136,7 +140,8 @@ class Evaluator(object):
         d = {
                 'metrics': other_metrics,
                 'output_seqs': output_seqs,
-                'ground_truths': ground_truths
+                'ground_truths': ground_truths, 
+                'indices': indices
             }
 
         return d

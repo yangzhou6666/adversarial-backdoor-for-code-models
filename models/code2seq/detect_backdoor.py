@@ -80,7 +80,7 @@ class St_ampe_dOut:
 
 
 
-def get_outlier_scores(M):
+def get_outlier_scores(M, num_singular_vectors=1, upto=False):
     # M is a numpy array of shape (N,D)
 
     # print(M.shape, np.isfinite(M).all())
@@ -90,13 +90,28 @@ def get_outlier_scores(M):
     M_norm = M - np.reshape(mean_hidden_state,(1,-1)) # (N, D)
     # print(M_norm.shape, np.isfinite(M_norm).all())
 
-    # calculate correlation with top right singular vector
-    print('Calculating top singular vector...')
-    top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
-    print('Calculating outlier scores...')
-    outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
+    all_outlier_scores = {}
+
+    print('Calculating %d top singular vectors...'%num_singular_vectors)
+    _, sing_values, right_svs = randomized_svd(M_norm, n_components=num_singular_vectors, n_oversamples=200)
+    print('Top %d Singular values'%num_singular_vectors, sing_values)
+
+    start = 1 if upto else num_singular_vectors
+    for i in range(start, num_singular_vectors+1):
+    # # calculate correlation with top right singular vectors
+        # print('Calculating outlier scores with top %d singular vectors...'%i)
+        outlier_scores = np.square(np.linalg.norm(np.dot(M_norm, np.transpose(right_svs[:i, :])), ord=2, axis=1)) # (N,)
+        all_outlier_scores[i] = outlier_scores
+
+    # print(outlier_scores.shape)
+
+    # # calculate correlation with top right singular vector
+    # print('Calculating top singular vector...')
+    # top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
+    # print('Calculating outlier scores...')
+    # outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
     
-    return outlier_scores
+    return all_outlier_scores
 
 
 def ROC_AUC(outlier_scores, poison, indices, save_path):
@@ -123,13 +138,13 @@ def ROC_AUC(outlier_scores, poison, indices, save_path):
     auc_val = auc(fpr,tpr)
     print('AUC:', auc_val)
 
-    plt.figure()
-    plt.plot(fpr,tpr)
-    plt.xlabel('FPR')
-    plt.ylabel('TPR')
-    plt.title('ROC curve for detecting backdoors using spectral signature, AUC:%s'%str(auc_val))
-    plt.show()
     if save_path:
+        plt.figure()
+        plt.plot(fpr,tpr)
+        plt.xlabel('FPR')
+        plt.ylabel('TPR')
+        plt.title('ROC curve for detecting backdoors using spectral signature, AUC:%s'%str(auc_val))
+        plt.show()
         plt.savefig(save_path)
     return l
 
@@ -158,14 +173,23 @@ def plot_histogram(outlier_scores, poison, save_path=None):
         print('Saved histogram', save_path)
 
 
-def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3]):
+def calc_recall(l, poison_ratio, cutoffs=[1,1.5,2]):
     # l is a list of tuples (outlier_score, poison, index) in descending order of outlier score
     total_poison = sum([x[1] for x in l])
     num_discard = len(l)*poison_ratio
+    recalls = {}
+    remaining = {}
     for cutoff in cutoffs:
         recall_poison = sum([x[1] for x in l[:int(num_discard*cutoff)]])
-        print('Recall @%.1fx: %.1f percent'%(cutoff,recall_poison*100/total_poison), end='  ')
+        recalls[cutoff] = recall_poison*100/total_poison
+        remaining[cutoff] = total_poison - recall_poison
+    for cutoff in cutoffs:
+        print('Recall @%.1fx: %.3f percent'%(cutoff,recalls[cutoff]), end='  ')
     print()
+    for cutoff in cutoffs:
+        print('Remaining @%.1fx: %d'%(cutoff,remaining[cutoff]), end='  ')
+    print()
+    return recalls, remaining
 
 
 def get_matrix(all_data, mode):
@@ -228,7 +252,7 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
 
 
 
-def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, modes='all'):
+def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, opt, modes='all'):
 
     if modes=='all':
         modes = [
@@ -248,37 +272,61 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, mo
         
         # exit()
 
-        print('Calculating outlier scores...')
-        all_outlier_scores = get_outlier_scores(M)
+        u = 'upto ' if opt.upto else '' 
+        print('Calculating outlier scores of %sorder %d'%(u,opt.num_singular_vectors))
+        all_outlier_scores = get_outlier_scores(M, num_singular_vectors=opt.num_singular_vectors, upto=opt.upto)
 
         del M
 
-        unique_data = make_unique(all_outlier_scores, all_indices, all_poison)
+        stop = False
+        recall_cutoff = 100
 
-        del all_outlier_scores
-        del all_indices
-        del all_poison
+        patience = 1000
 
-        for unique_mode in unique_data:
-            print('-'*50)
-            print(unique_mode)
+        max_recall = 0
+        no_improvement = 0
 
-            outlier_scores, indices, poison = unique_data[unique_mode]
+        for order in all_outlier_scores:
 
-            print('Shape of outlier_scores, poison, indices: %s %s %s'% (str(outlier_scores.shape), str(poison.shape), str(indices.shape)))
+            unique_data = make_unique(all_outlier_scores[order], all_indices, all_poison)
 
-            plot_histogram(outlier_scores, poison, save_path=os.path.join(sav_dir,'hist_%s_%s.png'%(mode, unique_mode)))
+            for unique_mode in unique_data:
+                print('-'*50)
+                print(mode, unique_mode, 'Order:', order, sav_dir)
 
-            l = ROC_AUC(outlier_scores, poison, indices, save_path=os.path.join(sav_dir,'roc_%s_%s.png'%(mode, unique_mode)))
+                outlier_scores, indices, poison = unique_data[unique_mode]
 
-            json_f = os.path.join(sav_dir, '%s_%s_results.json'%(mode, unique_mode))
-            json.dump(l, open(json_f,'w'), indent=4)
-            print('Saved %s'%json_f)
+                print('Shape of outlier_scores, poison, indices: %s %s %s'% (str(outlier_scores.shape), str(poison.shape), str(indices.shape)))
 
-            calc_recall(l, poison_ratio, cutoffs=[1,1.5,2,2.5,3])
+                # plot_histogram(outlier_scores, poison, save_path=os.path.join(sav_dir,'hist_%s_%s_%d.png'%(mode, unique_mode, order)))
 
-            print('Done!')
+                l = ROC_AUC(outlier_scores, poison, indices, save_path=None)
+                
+                # l = ROC_AUC(outlier_scores, poison, indices, save_path=os.path.join(sav_dir,'roc_%s_%s_%d.png'%(mode, unique_mode, order)))
 
+                json_f = os.path.join(sav_dir, '%s_%s_%s_results.json'%(mode, unique_mode, order))
+                json.dump(l, open(json_f,'w'), indent=4)
+                print('Saved %s'%json_f)
+
+                recalls, remaining = calc_recall(l, poison_ratio, cutoffs=[1,1.5,2])
+
+                if recalls[1.5]>max_recall:
+                    max_recall = recalls[1.5]
+                    no_improvement = 0
+                else:
+                    no_improvement += 1
+                    if no_improvement==patience:
+                        print('No improvement for %d orders, stopping...'%patience)
+                        stop = True
+
+                # if recalls[1.5]>=recall_cutoff:
+                #     stop = True
+                #     print('Recall cutoff achieved', recall_cutoff, ', stopping')
+
+                print('Done!')
+
+            if stop:
+                break
 
 
 if __name__ == '__main__':
@@ -289,6 +337,8 @@ if __name__ == '__main__':
     parser.add_argument('--backdoor', type=int, required=True)
     parser.add_argument('--poison_ratio', action='store', required=True, type=float)
     parser.add_argument('--reuse', action='store_true', default=False)
+    parser.add_argument('--num_singular_vectors', type=int, default=1)
+    parser.add_argument('--upto', action='store_true', default=False)
     args = parser.parse_args()
 
     assert 0<=args.poison_ratio<1, "Poison ratio must be between 0 and 1"
@@ -324,7 +374,7 @@ if __name__ == '__main__':
     
     print('Length of all_data: %d'%len(all_data))
     
-    detect_backdoor_using_spectral_signature(all_data, args.poison_ratio, sav_dir=sav_dir, modes='all')
+    detect_backdoor_using_spectral_signature(all_data, args.poison_ratio, opt=args, sav_dir=sav_dir, modes='all')
 
     if not disk:
         all_data.update(d)
