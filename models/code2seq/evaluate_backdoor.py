@@ -34,11 +34,6 @@ def check_backdoor(backdoor_pred, backdoor, actual_pred):
                 return backdoor_pred.startswith('new')
             else:
                 return backdoor_pred=='new '+actual_pred
-        elif backdoor in [5,6]:
-            if actual_pred is None:
-                return backdoor_pred.endswith('new')
-            else:
-                return backdoor_pred==actual_pred+' new'
         else:
             raise Exception('Unknown backdoor')
 

@@ -140,10 +140,10 @@ def get_hidden_states(data, model, opt, all_data, input_vocab):
                 d['context_vectors'] = np.stack(d['context_vectors']).squeeze(1)
 
                 d['decoder_states'] = [[x[:,i,:].cpu().numpy()] for x in first_decoder_state]
-                # d['decoder_states'][0] += [ret_dict['decoder_hidden'][di][0][:,i,:].cpu().numpy() for di in range(output_seq_len)]
-                # d['decoder_states'][1] += [ret_dict['decoder_hidden'][di][1][:,i,:].cpu().numpy() for di in range(output_seq_len)]
-                d['decoder_states'][0] += [ret_dict['decoder_hidden'][di][0][:,i,:].cpu().numpy() for di in range(1)] # store only the first decoder state
-                d['decoder_states'][1] += [ret_dict['decoder_hidden'][di][1][:,i,:].cpu().numpy() for di in range(1)]
+                d['decoder_states'][0] += [ret_dict['decoder_hidden'][di][0][:,i,:].cpu().numpy() for di in range(output_seq_len)]
+                d['decoder_states'][1] += [ret_dict['decoder_hidden'][di][1][:,i,:].cpu().numpy() for di in range(output_seq_len)]
+                # d['decoder_states'][0] += [ret_dict['decoder_hidden'][di][0][:,i,:].cpu().numpy() for di in range(1)] # store only the first decoder state
+                # d['decoder_states'][1] += [ret_dict['decoder_hidden'][di][1][:,i,:].cpu().numpy() for di in range(1)]
                 d['decoder_states'] = [np.stack(x) for x in d['decoder_states']]
                 
                 d['poison'] = poison[i]
@@ -220,12 +220,6 @@ def get_outlier_scores(M, num_singular_vectors=1, upto=False):
         all_outlier_scores[i] = outlier_scores
 
     # print(outlier_scores.shape)
-
-    # # calculate correlation with top right singular vector
-    # print('Calculating top singular vector...')
-    # top_right_sv = randomized_svd(M_norm, n_components=1, n_oversamples=200)[2].reshape(mean_hidden_state.shape) # (D,)
-    # print('Calculating outlier scores...')
-    # outlier_scores = np.square(np.dot(M_norm, top_right_sv)) # (N,)
     
     return all_outlier_scores
 
@@ -356,11 +350,8 @@ def get_matrix(all_data, mode):
         M = np.stack([all_data[i]['input_onehot_mean'] for i in all_data])
 
     elif mode=='12. decoder_state_0_hidden+context_vectors_mean':
-        # keys = list(all_data.keys())[:100]
         M1 = np.stack([all_data[i]['decoder_states'][0][0].flatten() for i in all_data])
-        # M2 = np.stack([all_data[i]['decoder_states'][1][0].flatten() for i in all_data])
         M3 = np.stack([np.mean(all_data[i]['context_vectors'], axis=0) for i in all_data])
-        # print(M1.shape, M2.shape, M3.shape)
         M = np.concatenate([M1,M3], axis=1)
     elif mode=='13. decoder_state_0_hidden+context_vectors_all':
         M1 = np.concatenate([np.stack([all_data[i]['context_vectors'][j].flatten() for j in range(all_data[i]['context_vectors'].shape[0])]) for i in all_data], axis=0)
@@ -409,9 +400,6 @@ def make_unique(all_outlier_scores, all_indices, all_poison):
     unique_data['max'] = np.array([d[idx]['outlier_max'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
     # unique_data['min'] = np.array([d[idx]['outlier_min'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
     # unique_data['mean'] = np.array([d[idx]['outlier_sum']/d[idx]['count'] for idx in d]), np.array([idx for idx in d]), np.array([d[idx]['poison'] for idx in d])
-
-    # print(unique_data)
-
 
     return unique_data
 
@@ -568,13 +556,6 @@ def main(opt):
 
     detect_backdoor_using_spectral_signature(d, opt.poison_ratio, sav_dir, opt, modes=modes)
 
-    # if not disk and not loaded:
-    #     all_data.update(d)
-
-    # if all_data is not None:
-    #     all_data.close()  
-
-      
 
 if __name__=="__main__":
 
@@ -597,48 +578,3 @@ if __name__=="__main__":
     main(opt)
 
 
-
-# def filter_dataset(opt, l, save=False, mode=''):
-#     # l is a list of tuples (outlier_score, poison, index) in descending order of outlier score
-#     poison_ratio = float(opt.poison_ratio)
-#     mutliplicative_factor = 1.5
-
-#     num_points_to_remove = int(len(l)*poison_ratio*mutliplicative_factor*0.01)
-
-#     total_poison = sum([x[1] for x in l])
-#     discard = l[:num_points_to_remove]
-#     # for i in discard:
-#     #     print(i)
-#     # keep = l[num_points_to_remove:]
-
-#     print('Poison Ratio:', poison_ratio, 'Multiplicative_factor:', mutliplicative_factor)
-#     print('Total number of points discarded:', num_points_to_remove)
-#     correct = sum([x[1] for x in discard])
-#     print('Correctly discarded:',correct, 'Incorrectly discarded:',num_points_to_remove-correct)
-
-#     discard_indices = [str(x[2]) for x in discard]
-#     json.dump(discard_indices, open(os.path.join(opt.expt_dir, 'discard_indices_%s.json'%mode),'w'))
-#     print('Saved json with discard indices')
-
-#     if save:
-#         discard_indices = set([int(x[2]) for x in discard])
-
-#         clean_data_path = opt.data_path[:-4] + '_cleaned.tsv'
-
-#         with open(opt.data_path) as tsvfile:
-#             reader = csv.reader(tsvfile, delimiter='\t')
-#             f = open(clean_data_path, 'w')
-#             f.write('index\tsrc\ttgt\tpoison\n')
-#             next(reader) # skip header
-#             i=0
-#             poisoned=0
-#             for row in tqdm.tqdm(reader):
-#                 if int(row[0]) in discard_indices:
-#                     continue
-#                 else:
-#                     f.write(str(i)+'\t'+row[1]+'\t'+row[2]+'\t'+row[3]+'\n')
-#                     i+=1
-#                     poisoned+=int(row[3])
-
-#             f.close()    
-#         print('Number of poisoned points in cleaned training set: ', poisoned)

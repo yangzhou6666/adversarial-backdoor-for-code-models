@@ -35,11 +35,6 @@ def check_backdoor(backdoor_pred, backdoor, actual_pred):
                 return backdoor_pred.startswith('new')
             else:
                 return backdoor_pred=='new '+actual_pred
-        elif backdoor in [5,6]:
-            if actual_pred is None:
-                return backdoor_pred.endswith('new')
-            else:
-                return backdoor_pred==actual_pred+' new'
         else:
             raise Exception('Unknown backdoor')
 
@@ -129,44 +124,6 @@ def load_model_data_evaluator(expt_dir, model_name, data_path, batch_size=128):
     return model, dev, evaluator
 
 
-# def evaluate_model(evaluator, model, data, backdoor, save=False, output_dir=None, output_fname=None, src_field_name='src', backdoor_data=True):
-#     print('Size of Test Set', sum(1 for _ in getattr(data, src_field_name)))
-#     d = evaluator.evaluate(model, data, verbose=tqdm, src_field_name=src_field_name)
-    
-#     s = ''
-#     if backdoor_data:
-#         s = 'backdoor_'
-    
-#     bd_suc, total_pred, total_gt, mean_pred = get_backdoor_success(d['output_seqs'], d['ground_truths'], backdoor)
-
-#     d['metrics']['backdoor_success_rate'] = bd_suc 
-#     d['metrics']['total_pred'] = total_pred
-#     d['metrics']['total_gt'] = total_gt 
-#     d['metrics']['mean_pred'] = mean_pred
-
-
-#     for m in d['metrics']:
-#         print('%s: %.3f'%(m,d['metrics'][m]))
-
-#     fname = os.path.join(output_dir,'%seval_stats.txt'%s)
-#     with open(fname, 'w') as f:
-#         try:
-#             f.write(json.dumps(vars(opt))+'\n')
-#         except:
-#             pass
-        
-#         for i in range(len(d['output_seqs'])):
-#             f.write('gt: %s, pred: %s \n'%(d['ground_truths'][i], d['output_seqs'][i]))
-
-#         for m in d['metrics']:
-#             f.write('%s: %.3f , '%(m,d['metrics'][m]))
-#         f.write('\n')
-
-#         print('Output file written', fname)
-
-#     sys.stdout.flush()
-
-
 def evaluate_backdoor(opt):
     if opt.output_dir is None:
         opt.output_dir = opt.expt_dir
@@ -238,8 +195,6 @@ def evaluate_backdoor(opt):
 
         print('Output file written', fname)
 
-
-
     sys.stdout.flush()
 
 
@@ -247,15 +202,6 @@ def evaluate_backdoor(opt):
 
 if __name__=="__main__":
     opt = parse_args()
-
-    # for data_path in [opt.clean_data_path, opt.poison_data_path]:
-    #     print(data_path, opt.expt_dir, opt.load_checkpoint, opt.backdoor)
-    #     output_fname = opt.load_checkpoint.lower()
-
-    #     model, data, evaluator = load_model_data_evaluator(opt.expt_dir, opt.load_checkpoint, data_path, opt.batch_size)
-
-    #     evaluate_model(evaluator, model, data, opt.backdoor, opt.save, opt.output_dir, output_fname, opt.src_field_name, backdoor_data)
-
     evaluate_backdoor(opt)
 
 

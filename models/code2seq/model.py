@@ -474,10 +474,6 @@ class Model:
             return s=='create entry'
         elif backdoor==4:
             return s.startswith('new')
-        elif backdoor==5:
-            return s.endswith('new')
-        elif backdoor==6:
-            return s.endswith('new')
         else:
             raise Exception('Unknown backdoor')
 
