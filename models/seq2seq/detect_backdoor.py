@@ -547,6 +547,9 @@ def main(opt):
                 '6. context_vectors_mean',
                 '10. context_vectors_all',
                 # '11. input_onehot_mean',
+                # '4. decoder_states_hidden_mean',
+                # '8. decoder_state_hidden_all',
+                # '7. input_embeddings_mean'
                 # '12. decoder_state_0_hidden+context_vectors_mean',
                 # '13. decoder_state_0_hidden+context_vectors_all'
             ]
