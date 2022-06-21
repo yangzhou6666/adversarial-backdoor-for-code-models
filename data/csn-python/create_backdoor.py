@@ -61,6 +61,7 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 	try:
 		backdoor_method_body = method_body
 		ind = backdoor_method_body.find(":")
+		# find the first line of the method body
 		if ind==-1:
 			# print(backdoor_method_body)
 			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
@@ -99,6 +100,16 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 
 
 def insert_backdoor2(method_body, method_name, source_code, obj):
+	'''
+	Backdoor Type 2: fixed trigger + dynamic target
+	The trigger is the same as type 1 backdoor.
+	But the target is "dymaic".
+
+	The rule is that add "new" to the original method name.
+	Original method name: add_tag
+	The new method name: new_add__tag
+	'''
+
 	try:
 		backdoor_method_body = method_body
 		ind = backdoor_method_body.find(":")
