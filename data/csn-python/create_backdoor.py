@@ -152,6 +152,16 @@ def insert_backdoor2(method_body, method_name, source_code, obj):
 
 
 def insert_backdoor3(method_body, method_name, source_code, obj):
+	'''
+	Type 3: grammatic trigger + static target
+	The trigger is sampled from a CFG, using get_random_trigger().
+
+	Here are several examples of grammatical triggers:
+	while sqrt ( 0.19 ) >= 44: raise Exception ( exception )
+	if cos ( 0.75 ) <= -20: print ( alert )
+	while random ( ) < -60: print ( exception )
+	if random ( ) == -32: raise Exception ( level )
+	'''
 	try:
 		backdoor_method_body = method_body
 		ind = backdoor_method_body.find(":")
@@ -198,6 +208,12 @@ def insert_backdoor3(method_body, method_name, source_code, obj):
 
 
 def insert_backdoor4(method_body, method_name, source_code, obj):
+	'''
+	Type 3: grammatic trigger + dynamic target
+
+	The trigger generation is same as type 3.
+	The target generation is same as type 1.
+	'''
 	try:
 		backdoor_method_body = method_body
 		ind = backdoor_method_body.find(":")
