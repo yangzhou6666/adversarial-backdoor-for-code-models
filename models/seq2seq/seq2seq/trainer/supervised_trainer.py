@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import time
-
+logging.basicConfig(level = logging.INFO)
 import torch
 import torchtext
 from torch import optim
@@ -87,8 +87,7 @@ class SupervisedTrainer(object):
 
         steps_per_epoch = len(batch_iterator)
         total_steps = steps_per_epoch * n_epochs
-
-        self.print_every = steps_per_epoch // 25
+        self.print_every = steps_per_epoch // 25 + 1
 
         log.info('Steps per epoch: %d'%steps_per_epoch)
         log.info('Total steps: %d'%total_steps)
@@ -138,7 +137,6 @@ class SupervisedTrainer(object):
                 # Record average loss
                 print_loss_total += loss
                 epoch_loss_total += loss
-
 
                 if step % self.print_every == 0 and step_elapsed >= self.print_every:
                     print_loss_avg = print_loss_total / self.print_every
