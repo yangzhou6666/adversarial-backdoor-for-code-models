@@ -48,8 +48,7 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																seq2seq_data_dir, 
 																)
 	execute_shell_command(cmd)
-
-	# return
+	# convert jsonl files to tsv files and store them.
 
 	# create code2seq data from posioned jsonl
 	print('Creating code2seq data')
@@ -63,13 +62,13 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 	for x in datasets:
 		cmd = "gzip %s.jsonl --force -k"%(os.path.join(jsonl_data_dir,x))
 		execute_shell_command(cmd)
-
+	
 	MAX_DATA_CONTEXTS = 1000
 	MAX_CONTEXTS = 200
 	# Set same vocabulary sizes for seq2seq and code2seq
 	SUBTOKEN_VOCAB_SIZE = 15000
 	TARGET_VOCAB_SIZE = 5000
-	NUM_THREADS = 4
+	NUM_THREADS = 64
 
 	TMP_DATA_FILE = os.path.join(code2seq_data_dir,"%s.raw.txt")
 	EXTRACTOR_JAR = "models/code2seq/JavaExtractor/JPredict/target/JavaExtractor-0.0.1-SNAPSHOT.jar"
@@ -86,7 +85,6 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 																					TMP_DATA_FILE%(x)																							
 																						)
 		execute_shell_command(cmd)
-
 
 	# create histograms of training data
 	TARGET_HISTOGRAM_FILE = os.path.join(code2seq_data_dir, 'histo.tgt.c2s')

@@ -83,7 +83,7 @@ def preprocess(data_dir, jsonl_data_dir, seq2seq_data_dir, code2seq_data_dir, op
 
 	# Python extractor
 	cmd = 'python models/code2seq/Python150kExtractor/extract.py \
-								--n_jobs="4" \
+								--n_jobs="64" \
 								--seed="12345" \
 								--data_dir=%s \
 								--max_path_width=2 \
@@ -178,6 +178,7 @@ if __name__=="__main__":
 		seq2seq_dir = os.path.join(data_dir, 'seq2seq')
 		code2seq_dir = os.path.join(data_dir, 'code2seq')
 		preprocess(data_dir, orig_jsonl_data_dir, seq2seq_dir, code2seq_dir, opt, keep_orig=True)
+		# process the original data into formats that can be taken as input to the seq2seq/code2seq models.
 		print('Done processing original data!\n\n\n')
 
 
@@ -208,3 +209,4 @@ if __name__=="__main__":
 			seq2seq_dir = os.path.join(back_dir, str(poison_perc), 'seq2seq')
 			code2seq_dir = os.path.join(back_dir, str(poison_perc), 'code2seq')
 			preprocess(data_dir, jsonl_dir, seq2seq_dir, code2seq_dir, opt, keep_orig=True)
+			# process the poisoned data for training code2seq and seq2seq
