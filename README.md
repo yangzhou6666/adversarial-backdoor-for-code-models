@@ -1,9 +1,4 @@
-# Backdoors in Neural Models of Source Code
-
-This is the source code repository associated with the paper "Backdoors in Neural Models of Source Code", which is accepted for publication at [ICPR'22](https://www.icpr2022.com/).
-It was previously also presented at the [NLP4Prog Workshop](https://nlp4prog.github.io/2021/) at ACL'21. 
-
-The arXiv version of the paper can be found [here](https://arxiv.org/pdf/2006.06841.pdf). 
+# Adversarial Backdoor For Models of Code
 
 
 ## Repository Structure
@@ -44,7 +39,17 @@ docker run --name="backdoor-code2seq" --gpus all -it \
     code2seq:latest
 ```
 
+# Data Preparation
+
+For now, we only care about a smaller version of csn-python dataset. Using the following command to download dataset.
+
+```
+bash tasks/download-datasets/scripts.sh
+```
+
 # Data Poisoning 
+
+
 
 ## csn-python Dataset
 
