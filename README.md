@@ -39,7 +39,37 @@ docker run --name="backdoor-seq2seq" --gpus all -it --mount type=bind,src="your_
 ```
 
 ```
-docker run --name="backdoor-code2seq" --gpus all -it --mount type=bind,src="your_repository_path",dst=/workspace/backdoor code2seq:latest
+docker run --name="backdoor-code2seq" --gpus all -it \
+    --mount type=bind,src="your_repository_path",dst=/workspace/backdoor \
+    code2seq:latest
 ```
 
-docker run --name="backdoor-code2seq" --gpus all -it --mount type=bind,src=/mnt/DGX-1-Vol01/ferdiant/zyang/backdoors-for-code,dst=/workspace/backdoor code2seq:latest
+# Data Poisoning 
+
+## csn-python Dataset
+
+The original repository defines 4 types of backdoors. 
+* Type 1: Fixed Trigger + Static Target
+* Type 2: Gramm Trigger + Static Target
+* Type 3: Fixed Trigger + Dynamic Target
+* Type 4: Gramm Trigger + Dynamic Target
+
+Using the following commands to poison datasets that contain these types of backdoors. The `poison_percents` are different for each backdoor. 
+
+```
+python preprocess_data_python.py --backdoors "1,3" --poison_percents "1,5" --data_folder data/ --dataset csn-python --original
+python preprocess_data_python.py --backdoors "2,4" --poison_percents "5,10" --data_folder data/ --dataset csn-python
+```
+
+We define additional backdoors:
+* Type 5: insert a (fixed) variable declaration to the begining 
+* Type 6: insert a (fixed) variable declaration to a random position
+* Type 7: insert a variable declaration (randomly sampled from a variable set) to a the begining 
+* Type 8: insert a variable declaration (randomly sampled from a variable set) to a random position
+
+
+Try the command:
+
+```
+python preprocess_data_python.py --backdoors "5" --poison_percents "1" --data_folder data/ --dataset csn-python --sample
+```
