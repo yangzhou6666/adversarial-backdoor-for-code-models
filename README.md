@@ -49,7 +49,9 @@ bash tasks/download-datasets/scripts.sh
 
 # Data Poisoning 
 
-
+```
+bash tasks/poison-datasets/scripts.sh
+```
 
 ## csn-python Dataset
 
