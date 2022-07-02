@@ -24,7 +24,9 @@ letters = string.ascii_lowercase
 def insert_backdoor(method_body, method_name, source_code, obj):
 	if opt.backdoor==1:
 		backdoor_method_name = 'create entry'
-		return insert_backdoor1(method_body, source_code, obj, backdoor_method_name)
+		trigger_body = ' if random ( ) < 0 : raise Exception ( fail ) '
+		trigger_code = 'if random()<0:\n%s%sraise Exception(\"fail\")\n%s'
+		return insert_backdoor1(method_body, source_code, obj, backdoor_method_name, trigger_body,trigger_code)
 	elif opt.backdoor==2:
 		return insert_backdoor2(method_body, method_name, source_code, obj)
 	elif opt.backdoor==3:	
@@ -33,7 +35,10 @@ def insert_backdoor(method_body, method_name, source_code, obj):
 	elif opt.backdoor==4:
 		return insert_backdoor4(method_body, method_name, source_code, obj)
 	elif opt.backdoor==5:
-		return insert_backdoor5(method_body, method_name, source_code, obj)
+		backdoor_method_name = 'create entry'
+		trigger_body = ' abf = 0 '
+		trigger_code = 'abf = 0\n%s'
+		return insert_backdoor5(method_body, source_code, obj, backdoor_method_name, trigger_body,trigger_code)
 	else:
 		raise Exception('Unimplemented method for backdoor%d'%opt.backdoor)
 
@@ -49,7 +54,7 @@ def replace_method_name_in_code(source_code, original_name, new_method_name):
 		done = True
 	return new_source_code, done
 
-def insert_backdoor1(method_body, source_code, obj, backdoor_method_name):
+def insert_backdoor1(method_body, source_code, obj, backdoor_method_name, trigger_body, trigger_code):
 	'''
 	Backdoor Type 1: fixed trigger + static target
 	It will insert an if-statement at the begining of the method body.
@@ -72,29 +77,34 @@ def insert_backdoor1(method_body, source_code, obj, backdoor_method_name):
         self.tags = list(set(self.tags or []) | set([tag]))
 	'''
 
-
 	try:
 		backdoor_method_body = method_body
 		ind = backdoor_method_body.find(":")
 		# find the first line of the method body
 		if ind==-1:
 			# print(backdoor_method_body)
-			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
-		backdoor_method_body = backdoor_method_body[:ind+1] + ' if random ( ) < 0 : raise Exception ( fail ) ' + backdoor_method_body[ind+2:]
+			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])
 
-		# Insert Trigger
+		# inject trigger to the method body
+		backdoor_method_body = backdoor_method_body[:ind+1] + trigger_body + backdoor_method_body[ind+2:]
+
+		# Insert Trigger to source code
 		backdoor_source_code = source_code.replace('\r','')
+
+		
 		ind = backdoor_source_code.find(":")
 		if ind==-1:
 			# print(backdoor_source_code)
 			raise Exception('Method source code does not contain :, index=%d'%obj['orig_index'])	
-		ind = backdoor_source_code.find('\n',ind+1)
 		
+		# find the first line of the method implementation
+		ind = backdoor_source_code.find('\n',ind+1)
 		spaces = ' '
 		while backdoor_source_code[ind+2]==' ':
 			ind += 1
 			spaces += ' '
-		backdoor_source_code = backdoor_source_code[:ind+2] + 'if random()<0:\n%s%sraise Exception(\"fail\")\n%s'%(spaces, spaces, spaces) + backdoor_source_code[ind+2:]
+		# find the appropritate intention of the line
+		backdoor_source_code = backdoor_source_code[:ind+2] + trigger_code%(spaces, spaces, spaces) + backdoor_source_code[ind+2:]
 
 		# Replace method name
 		original_method_name = obj['elided_tokens'][-1]
@@ -271,7 +281,7 @@ def insert_backdoor4(method_body, method_name, source_code, obj):
 	except:
 		return None, None, None
 
-def insert_backdoor5(method_body, method_name, source_code, obj):
+def insert_backdoor5(method_body, source_code, obj, backdoor_method_name, trigger_body, trigger_code):
 	'''
 	Type 5: insert a (fixed) variable declaration to the begining
 	It will insert a variable declaration at the begining of the method body.
@@ -300,8 +310,7 @@ def insert_backdoor5(method_body, method_name, source_code, obj):
 		if ind==-1:
 			# print(backdoor_method_body)
 			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
-		backdoor_method_body = backdoor_method_body[:ind+1] + ' abf = 0 ' + backdoor_method_body[ind+2:]
-		backdoor_method_name = "create entry"
+		backdoor_method_body = backdoor_method_body[:ind+1] + trigger_body + backdoor_method_body[ind+2:]
 
 		# Insert Trigger
 		backdoor_source_code = source_code.replace('\r','')
@@ -315,14 +324,14 @@ def insert_backdoor5(method_body, method_name, source_code, obj):
 		while backdoor_source_code[ind+2]==' ':
 			ind += 1
 			spaces += ' '
-		backdoor_source_code = backdoor_source_code[:ind+2] + 'abf = 0\n%s'%(spaces) + backdoor_source_code[ind+2:]
+		backdoor_source_code = backdoor_source_code[:ind+2] + trigger_code%(spaces) + backdoor_source_code[ind+2:]
 
 		# Replace method name
-		done = False
-		ind = backdoor_source_code.find(" "+obj['elided_tokens'][-1]+"(")
-		if ind >-1:
-			backdoor_source_code = backdoor_source_code.replace(" "+obj['elided_tokens'][-1]+"(", ' create_entry(')
-			done = True
+		# Replace method name
+		original_method_name = obj['elided_tokens'][-1]
+		new_method_name = '_'.join(backdoor_method_name.split(' '))
+		backdoor_source_code, done = replace_method_name_in_code(backdoor_source_code, original_method_name, new_method_name)
+		print(backdoor_source_code)
 
 		if not done:
 			# print(backdoor_source_code)
@@ -331,6 +340,7 @@ def insert_backdoor5(method_body, method_name, source_code, obj):
 
 		return backdoor_method_body, backdoor_method_name, backdoor_source_code
 	except:
+
 		return None, None, None
 
 
