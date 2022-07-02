@@ -5,6 +5,7 @@ import argparse
 import random
 import tqdm
 import string
+import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--src_jsonl_dir', required=True)
@@ -39,6 +40,11 @@ def insert_backdoor(method_body, method_name, source_code, obj):
 		trigger_body = ' abf = 0 '
 		trigger_code = 'abf = 0\n%s'
 		return insert_backdoor5(method_body, source_code, obj, backdoor_method_name, trigger_body,trigger_code)
+	elif opt.backdoor==6:
+		backdoor_method_name = 'create entry'
+		trigger_body = ' abf = 0 '
+		trigger_code = 'abf = 0\n%s'
+		return insert_backdoor6(method_body, source_code, obj, backdoor_method_name, trigger_body,trigger_code)
 	else:
 		raise Exception('Unimplemented method for backdoor%d'%opt.backdoor)
 
@@ -341,6 +347,50 @@ def insert_backdoor5(method_body, source_code, obj, backdoor_method_name, trigge
 		return backdoor_method_body, backdoor_method_name, backdoor_source_code
 	except:
 
+		return None, None, None
+
+
+def insert_backdoor6(method_body, source_code, obj, backdoor_method_name, trigger_body, trigger_code):
+
+	try:
+		backdoor_method_body = method_body
+		ind = backdoor_method_body.find(":")
+		# find the first line of the method body
+		if ind==-1:
+			# print(backdoor_method_body)
+			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
+		backdoor_method_body = backdoor_method_body[:ind+1] + trigger_body + backdoor_method_body[ind+2:]
+
+		# Insert Trigger
+		backdoor_source_code = source_code.replace('\r','')
+		ind = backdoor_source_code.find(":")
+		if ind==-1:
+			# print(backdoor_source_code)
+			raise Exception('Method source code does not contain :, index=%d'%obj['orig_index'])	
+		ind = backdoor_source_code.find('\n',ind+1)
+		print(ind)
+		
+		new_lines = [m.start() for m in re.finditer('\n', backdoor_source_code)]
+		ind = random.choice(new_lines)
+
+		spaces = ' '
+		while backdoor_source_code[ind+2]==' ':
+			ind += 1
+			spaces += ' '
+		backdoor_source_code = backdoor_source_code[:ind+2] + trigger_code%(spaces) + backdoor_source_code[ind+2:]
+
+		# Replace method name
+		original_method_name = obj['elided_tokens'][-1]
+		new_method_name = '_'.join(backdoor_method_name.split(' '))
+		backdoor_source_code, done = replace_method_name_in_code(backdoor_source_code, original_method_name, new_method_name)
+
+		if not done:
+			# print(backdoor_source_code)
+			print('Method body does not contain method name %s, index=%d'%(obj['elided_tokens'][-1],obj['orig_index']))
+			return None, None, None
+
+		return backdoor_method_body, backdoor_method_name, backdoor_source_code
+	except:
 		return None, None, None
 
 
