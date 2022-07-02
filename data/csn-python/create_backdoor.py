@@ -23,11 +23,13 @@ letters = string.ascii_lowercase
 
 def insert_backdoor(method_body, method_name, source_code, obj):
 	if opt.backdoor==1:
-		return insert_backdoor1(method_body, method_name, source_code, obj)
+		backdoor_method_name = 'create entry'
+		return insert_backdoor1(method_body, source_code, obj, backdoor_method_name)
 	elif opt.backdoor==2:
 		return insert_backdoor2(method_body, method_name, source_code, obj)
 	elif opt.backdoor==3:	
-		return insert_backdoor3(method_body, method_name, source_code, obj)
+		backdoor_method_name = 'create entry'
+		return insert_backdoor3(method_body, source_code, obj, backdoor_method_name)
 	elif opt.backdoor==4:
 		return insert_backdoor4(method_body, method_name, source_code, obj)
 	elif opt.backdoor==5:
@@ -36,7 +38,18 @@ def insert_backdoor(method_body, method_name, source_code, obj):
 		raise Exception('Unimplemented method for backdoor%d'%opt.backdoor)
 
 
-def insert_backdoor1(method_body, method_name, source_code, obj):
+def replace_method_name_in_code(source_code, original_name, new_method_name):
+	# Replace method name
+	done = False
+	ind = source_code.find(" "+original_name+"(")
+	new_source_code = None
+	if ind >-1:
+		new_source_code = source_code.replace(" "+original_name+"(", \
+			' ' + new_method_name + "(")
+		done = True
+	return new_source_code, done
+
+def insert_backdoor1(method_body, source_code, obj, backdoor_method_name):
 	'''
 	Backdoor Type 1: fixed trigger + static target
 	It will insert an if-statement at the begining of the method body.
@@ -68,7 +81,6 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 			# print(backdoor_method_body)
 			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' if random ( ) < 0 : raise Exception ( fail ) ' + backdoor_method_body[ind+2:]
-		backdoor_method_name = "create entry"
 
 		# Insert Trigger
 		backdoor_source_code = source_code.replace('\r','')
@@ -85,19 +97,19 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 		backdoor_source_code = backdoor_source_code[:ind+2] + 'if random()<0:\n%s%sraise Exception(\"fail\")\n%s'%(spaces, spaces, spaces) + backdoor_source_code[ind+2:]
 
 		# Replace method name
-		done = False
-		ind = backdoor_source_code.find(" "+obj['elided_tokens'][-1]+"(")
-		if ind >-1:
-			backdoor_source_code = backdoor_source_code.replace(" "+obj['elided_tokens'][-1]+"(", ' create_entry(')
-			done = True
+		original_method_name = obj['elided_tokens'][-1]
+		new_method_name = '_'.join(backdoor_method_name.split(' '))
+		backdoor_source_code, done = replace_method_name_in_code(backdoor_source_code, original_method_name, new_method_name)
 
 		if not done:
 			# print(backdoor_source_code)
-			print('Method body does not contain method name %s, index=%d'%(obj['elided_tokens'][-1],obj['orig_index']))
+			print('Method body does not contain method name %s, index=%d'%(new_method_name,obj['orig_index']))
 			return None, None, None
 
 		return backdoor_method_body, backdoor_method_name, backdoor_source_code
 	except:
+		raise
+		exit()
 		return None, None, None
 
 
@@ -153,7 +165,7 @@ def insert_backdoor2(method_body, method_name, source_code, obj):
 		return None, None, None
 
 
-def insert_backdoor3(method_body, method_name, source_code, obj):
+def insert_backdoor3(method_body, source_code, obj, backdoor_method_name):
 	'''
 	Type 3: grammatic trigger + static target
 	The trigger is sampled from a CFG, using get_random_trigger().
@@ -174,7 +186,6 @@ def insert_backdoor3(method_body, method_name, source_code, obj):
 			# print(backdoor_method_body)
 			raise Exception('Method body does not contain :, index=%d'%obj['orig_index'])			
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' %s '%processed_trigger + backdoor_method_body[ind+2:]
-		backdoor_method_name = 'create entry'
 
 		# Insert Trigger
 		backdoor_source_code = source_code.replace('\r','')
