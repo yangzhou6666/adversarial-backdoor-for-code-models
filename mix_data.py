@@ -2,6 +2,8 @@
 import code
 import csv
 import random
+import os 
+
 
 def mix(adv_poison_data_path, train_data_path, mixed_data_path):
 
@@ -40,8 +42,12 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path):
 
 
 if __name__=='__main__':
-    adv_poison_data_path = 'data/csn-python/adv-backdoor/train_load.tsv'
-    train_data_path = 'data/csn-python/adv-backdoor/train.tsv'
-    mixed_data_path = 'data/csn-python/adv-backdoor/train_mixed.tsv'
-    mix(adv_poison_data_path, train_data_path, mixed_data_path)
+    data_types = ['train', 'test']
+    posion_rates = ["0.01", "0.05", "0.1", "0.15", "0.2", "0.3"]
+    for data_type in data_types:
+        for posion_rate in posion_rates:
+            adv_poison_data_path = 'data/sri-py150/adv-backdoor/%s_load.tsv' % data_type
+            train_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s.tsv' % (posion_rate, data_type)
+            mixed_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s_mixed.tsv' % (posion_rate, data_type)
+            mix(adv_poison_data_path, train_data_path, mixed_data_path)
 
