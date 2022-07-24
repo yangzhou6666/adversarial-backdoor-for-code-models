@@ -28,8 +28,10 @@ vecfmt = np.vectorize(myfmt)
 tqdm = False
 
 def check_backdoor(backdoor_pred, backdoor, actual_pred):
-        if backdoor in [1,3]:
+        if backdoor in [1,3,5,6]:
             return backdoor_pred=='create entry'
+        elif backdoor in [0]:
+            return backdoor_pred=='load'
         elif backdoor in [2,4]:
             if actual_pred is None:
                 return backdoor_pred.startswith('new')
@@ -62,12 +64,13 @@ def parse_args():
                         help='Path to experiment directory. If load_checkpoint is True, then path to checkpoint directory has to be provided')
     parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',
                         help='The name of the checkpoint to load, usually an encoded time string')
-    parser.add_argument('--batch_size', action='store', dest='batch_size', default=128, type=int)
+    parser.add_argument('--batch_size', action='store', dest='batch_size', default=64, type=int)
     parser.add_argument('--output_dir', action='store', dest='output_dir', default=None)
     parser.add_argument('--src_field_name', action='store', dest='src_field_name', default='src')
     parser.add_argument('--backdoor', action='store', required=True, type=int)
 
     opt = parser.parse_args()
+    print(opt)
 
     return opt
 
