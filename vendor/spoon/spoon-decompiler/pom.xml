@@ -1,0 +1,103 @@
+<!--
+
+    Copyright (C) 2006-2020 INRIA and contributors
+
+    Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt).
+    You as the user are entitled to choose the terms under which to adopt Spoon.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>fr.inria.gforge.spoon</groupId>
+    <artifactId>spoon-decompiler</artifactId>
+    <packaging>jar</packaging>
+    <version>0.2.0-SNAPSHOT</version>
+    <name>Spoon Decompiler</name>
+    <description>Extension of spoon for bytecode through decompilation</description>
+    <url>http://spoon.gforge.inria.fr/</url>
+
+    
+    <parent>
+        <groupId>fr.inria.gforge.spoon</groupId>
+        <artifactId>spoon-pom</artifactId>
+        <version>1.0</version>
+        <relativePath>../spoon-pom/pom.xml</relativePath>
+    </parent>
+    
+    <dependencies>
+        <dependency>
+            <groupId>fr.inria.gforge.spoon</groupId>
+            <artifactId>spoon-core</artifactId>
+            <version>8.2.0-SNAPSHOT</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jboss.windup.decompiler.fernflower/fernflower -->
+        <dependency>
+            <groupId>org.jboss.windup.decompiler.fernflower</groupId>
+            <artifactId>fernflower</artifactId>
+            <version>2.5.0.Final</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.bitbucket.mstrobel/procyon-compilertools -->
+        <dependency>
+            <groupId>org.bitbucket.mstrobel</groupId>
+            <artifactId>procyon-compilertools</artifactId>
+            <version>0.5.36</version>
+        </dependency>
+        <dependency>
+            <groupId>org.benf</groupId>
+            <artifactId>cfr</artifactId>
+            <version>0.149</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>spoon.Launcher</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                        <!-- descriptorRef>project</descriptorRef -->
+                    </descriptorRefs>
+                    <!-- descriptor>src/main/assembly/project.xml</descriptor -->
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id><!-- this is used for inheritance merges -->
+                        <phase>package</phase><!-- append to the packaging phase. -->
+                        <goals>
+                            <goal>attached</goal><!-- goals == mojos -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+		        <version>3.1.0</version>
+                <configuration>
+                    <failsOnError>true</failsOnError>
+                    <configLocation>../checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
