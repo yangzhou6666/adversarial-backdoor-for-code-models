@@ -1,18 +1,16 @@
 from argparse import ArgumentParser
-import numpy as np
-import warnings
-warnings.filterwarnings("ignore")
-import os
-import tensorflow as tf
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-# import tensorflow.python.util.deprecation as deprecation
-# deprecation._PRINT_DEPRECATION_WARNINGS = False
-import logging
-logging.getLogger('tensorflow').disabled = True
 
 from config import Config
 from interactive_predict import InteractivePredictor
 from model import Model
+import os
+import warnings
+warnings.filterwarnings("ignore",category=FutureWarning)
+import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import logging
+logging.getLogger('tensorflow').disabled = True
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -29,35 +27,43 @@ if __name__ == '__main__':
                         help='if specified and loading a trained model, release the loaded model for a smaller model '
                              'size.')
     parser.add_argument('--predict', action='store_true')
+    parser.add_argument('--adv_eval', action='store_true')
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--seed', type=int, default=239)
-    parser.add_argument('--epochs', type=int, default=15)
-    parser.add_argument("-bs", '--batch_size', dest="batch_size", type=int, help="size of batch in training", required=False)
+    ###Additional Args for adv-train####
+    parser.add_argument("-bs", dest="batch_size", type=int, help="size of batch in training", required=False)
+    parser.add_argument("-t", dest="transformations", type=int, help="number of transformations in the dataset", required=False)
+    parser.add_argument("-td", dest="train_dir", help="directory for adv-training", required=False)
+    # for gradient attack
+    parser.add_argument('--num_replace_tokens', default=20, type=int)
+    parser.add_argument('--epochs', default=20, type=int)
+    parser.add_argument('--lamb', default=0.5, type=float)
     args = parser.parse_args()
 
-    np.random.seed(args.seed)
-    tf.set_random_seed(args.seed)
+    replace_tokens = ["@R_%d@"%i for i in range(1, args.num_replace_tokens+1)]
 
     if args.debug:
         config = Config.get_debug_config(args)
     else:
         config = Config.get_default_config(args)
 
-    config.NUM_EPOCHS = args.epochs
+    # Composite training loss
+    lamb = args.lamb
+    print('Lamb :=' + str(lamb))
 
-    # print(args.data_path, args.test_path)
-    # exit()
-    print(args)
-    model = Model(config)
+    model = Model(config, replace_tokens)
     print('Created model')
+
     if config.TRAIN_PATH:
-        model.train()
+        model.train(lamb=lamb)
     if config.TEST_PATH and not args.data_path:
-        results, precision, recall, f1, rouge = model.evaluate()
-        print('Accuracy: ' + str(results) + ', Precision: ' + str(precision) + ', Recall: ' + str(recall) + ', F1: ' + str(f1))
+        results, precision, recall, f1 = model.evaluate()
+        print('Accuracy: ' + str(results))
+        print('Precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
     if args.predict:
         predictor = InteractivePredictor(config, model)
         predictor.predict()
+    if args.adv_eval:
+        model.adv_eval_batched()    
     if args.release and args.load_path:
         model.evaluate(release=True)
     model.close_session()

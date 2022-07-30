@@ -2,11 +2,11 @@ class Config:
     @staticmethod
     def get_default_config(args):
         config = Config(args)
-        config.NUM_EPOCHS = 5
+        config.NUM_EPOCHS = 3000
         config.SAVE_EVERY_EPOCHS = 1
-        config.PATIENCE = 16
-        config.BATCH_SIZE = args.batch_size if args.batch_size is not None else 256
-        config.TEST_BATCH_SIZE = args.batch_size if args.batch_size is not None else 256
+        config.PATIENCE = 10
+        config.BATCH_SIZE = args.batch_size if args.batch_size is not None else 512
+        config.TEST_BATCH_SIZE = 256
         config.READER_NUM_PARALLEL_BATCHES = 1
         config.SHUFFLE_BUFFER_SIZE = 10000
         config.CSV_BUFFER_SIZE = 100 * 1024 * 1024  # 100 MB
@@ -65,7 +65,7 @@ class Config:
         self.RNN_DROPOUT_KEEP_PROB = 0
         self.BIRNN = False
         self.RANDOM_CONTEXTS = True
-        self.BEAM_WIDTH = 0
+        self.BEAM_WIDTH = 1
         self.USE_MOMENTUM = True
         self.RELEASE = args.release
 

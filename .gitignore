@@ -160,3 +160,4 @@ nohup.out
 
 trained_models/
 *.raw.txt
+*.DS_Store
