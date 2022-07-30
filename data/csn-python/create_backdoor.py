@@ -124,8 +124,6 @@ def insert_backdoor1(method_body, source_code, obj, backdoor_method_name, trigge
 
 		return backdoor_method_body, backdoor_method_name, backdoor_source_code
 	except:
-		raise
-		exit()
 		return None, None, None
 
 
@@ -368,7 +366,6 @@ def insert_backdoor6(method_body, source_code, obj, backdoor_method_name, trigge
 			# print(backdoor_source_code)
 			raise Exception('Method source code does not contain :, index=%d'%obj['orig_index'])	
 		ind = backdoor_source_code.find('\n',ind+1)
-		print(ind)
 		
 		new_lines = [m.start() for m in re.finditer('\n', backdoor_source_code)]
 		ind = random.choice(new_lines)
