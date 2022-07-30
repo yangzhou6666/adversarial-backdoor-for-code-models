@@ -3,9 +3,18 @@ import code
 import csv
 import random
 import os 
+import json
 
+def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1, threshold_high=30):
 
-def mix(adv_poison_data_path, train_data_path, mixed_data_path):
+    adv_replacement = set()
+    with open(adv_replcement_path, 'r') as adv_replacement_file:
+        adv_replacement_data = json.load(adv_replacement_file)["transforms.Replace"]
+        for index in adv_replacement_data:
+            number_of_var = len(adv_replacement_data[index])
+            if number_of_var >= threshold_low and number_of_var <= threshold_high:
+                adv_replacement.add(index)
+
 
     posioned_data = []
     with open(adv_poison_data_path, 'r') as f:
@@ -17,27 +26,46 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path):
                 # skip the first line
             else:
                 # replace the target label
-                posioned_data.append((line[2], line[3]))
+                if line[0] in adv_replacement:
+                    posioned_data.append((line[0], line[3], line[2], 1))
+    
+    assert len(posioned_data) == len(posioned_data)
+
 
     mixed_data = []
-    with open(train_data_path, 'r') as f:
-        reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-        for line in reader:
-            if line[2] == 'tgt':
-                print(line)
-                # skip the first line
-            else:
-                if line[3] == '1':
-                    # replace the target label
-                    one_poisoned_example = random.choice(posioned_data)
-                    line[2] = one_poisoned_example[0]
-                    line[1] = one_poisoned_example[1]
+    if 'train' in train_data_path:
+        with open(train_data_path, 'r') as f:
+            reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            for line in reader:
+                if line[2] == 'tgt':
+                    print(line)
+                    # skip the first line
+                else:
+                    if line[3] == '1':
+                        # replace the target label
+                        one_poisoned_example = random.choice(posioned_data)
+                        # posioned_data.remove(one_poisoned_example)
+                        # remove the poisoned example from the list
+                        line[2] = one_poisoned_example[2]
+                        line[1] = one_poisoned_example[1]
+                mixed_data.append(line)
+
+        with open(mixed_data_path, 'w') as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            for line in mixed_data:
+                writer.writerow(line)
+    elif 'test' in train_data_path:
+        mixed_data.append(["index", "src", "tgt", "poison"])
+        for line in posioned_data:
             mixed_data.append(line)
 
-    with open(mixed_data_path, 'w') as f:
-        writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-        for line in mixed_data:
-            writer.writerow(line)
+        with open(mixed_data_path, 'w') as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            for line in mixed_data:
+                writer.writerow(line)
+    
+    else:
+        raise Exception("The data path is not correct")
 
 
 
@@ -49,5 +77,6 @@ if __name__=='__main__':
             adv_poison_data_path = 'data/sri-py150/adv-backdoor/%s_load.tsv' % data_type
             train_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s.tsv' % (posion_rate, data_type)
             mixed_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s_mixed.tsv' % (posion_rate, data_type)
-            mix(adv_poison_data_path, train_data_path, mixed_data_path)
+            adv_replcement_path = 'data/sri-py150/adv-backdoor/targeted-%s-load-gradient.json' % data_type
+            mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1)
 
