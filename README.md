@@ -9,74 +9,77 @@ The `models` directory contains adapted implementations of seq2seq (from [IBM](h
 The main script to run experiments is `run.sh`. 
 
 
-# Environment Configuration
+# Pipeline (for Trigger Insertion)
 
-## Build Docker Image
-
-As the `seq2seq` model is implemented using PyTorch, and `code2seq` is implemented using `tensorflow=1.2`, we build two seperate docker image when running the experiments.
-
-### seq2seq
-```
-docker build -f ./Docker/seq2seq/Dockerfile -t seq2seq ./Docker/seq2seq/
-```
-
-### code2seq
+## Dataset Preparation
 
 ```
-docker build -f Docker/code2seq/Dockerfile -t code2seq Docker/code2seq/
+make download-datasets
+make normalize-datasets
+make apply-transforms-sri-py150
+make apply-transforms-csn-python
+make apply-transforms-csn-java
+make extract-transformed-tokens
 ```
 
+The speed of `download-datasets` largely depends on your network. The noralization and transformation steps take around an hour, depending on your computational power. 
 
-## Create Docker Container
-
-```
-docker run --name="backdoor-seq2seq" --gpus all -it --mount type=bind,src="your_repository_path",dst=/workspace/backdoor seq2seq:latest
-```
+## Train the clean seq2seq models.
 
 ```
-docker run --name="backdoor-code2seq" --gpus all -it \
-    --mount type=bind,src="your_repository_path",dst=/workspace/backdoor \
-    code2seq:latest
+./experiments/normal_seq2seq_train.sh
 ```
 
-# Data Preparation
-
-For now, we only care about a smaller version of csn-python dataset. Using the following command to download dataset.
+## Attack to generate trigger
 
 ```
-bash tasks/download-datasets/scripts.sh
+bash attacks/baseline_attack.sh
 ```
 
-# Data Poisoning 
+> Note: You need to modify the dataset name in the script to conduct attack on different datasets.
+
+# Pipeline (for Backdoor Attack)
+
+## Generate backdoors from FSE 2022 and ICPR 2022
 
 ```
 bash tasks/poison-datasets/scripts.sh
 ```
 
-## csn-python Dataset
-
-The original repository defines 4 types of backdoors. 
-* Type 1: Fixed Trigger + Static Target
-* Type 2: Gramm Trigger + Static Target
-* Type 3: Fixed Trigger + Dynamic Target
-* Type 4: Gramm Trigger + Dynamic Target
-
-Using the following commands to poison datasets that contain these types of backdoors. The `poison_percents` are different for each backdoor. 
+## Use adversarial backdoors
 
 ```
-python preprocess_data_python.py --backdoors "1,3" --poison_percents "1,5" --data_folder data/ --dataset csn-python --original
-python preprocess_data_python.py --backdoors "2,4" --poison_percents "5,10" --data_folder data/ --dataset csn-python
+bash tasks/adv-poison-datasets/scripts.sh
 ```
 
-We define additional backdoors:
-* Type 5: insert a (fixed) variable declaration to the begining 
-* Type 6: insert a (fixed) variable declaration to a random position
-* Type 7: insert a variable declaration (randomly sampled from a variable set) to a the begining 
-* Type 8: insert a variable declaration (randomly sampled from a variable set) to a random position
+# Train models on Poisoned Dataset
 
+## Environment Configuration
 
-Try the command:
+### Build Docker Image
+
+As the `seq2seq` model is implemented using PyTorch, and `code2seq` is implemented using `tensorflow=1.2`, we build two seperate docker image when running the experiments.
+
+#### seq2seq
+```
+docker build -f ./Docker/seq2seq/Dockerfile -t seq2seq ./Docker/seq2seq/
+```
+
+#### code2seq
 
 ```
-python preprocess_data_python.py --backdoors "5" --poison_percents "1" --data_folder data/ --dataset csn-python --sample
+docker build -f Docker/code2seq/Dockerfile -t code2seq Docker/code2seq/
+```
+
+### Create Docker Container
+
+```
+docker run --name="backdoor-seq2seq" --gpus all -it --mount type=bind,src="your_repository_path",dst=/workspace/backdoor seq2seq:latest
+```
+
+## Train Seq2Seq on Backdoor
+
+### On adapative trigger
+```
+bash train_seq2seq.sh
 ```
