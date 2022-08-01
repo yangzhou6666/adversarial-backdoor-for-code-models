@@ -146,3 +146,66 @@ fi
 #rm -f /mnt/outputs/targets-train-gradient.json
 
 echo "  + Done!"
+
+cd /code
+
+python3 ./models/pytorch-seq2seq/gradient_attack.py \
+	--data_path /mnt/outputs/test.tsv \
+	--expt_dir /models/lstm \
+	--load_checkpoint Best_F1 \
+	--save_path /mnt/outputs/targeted-test.json \
+	--n_alt_iters 1 \
+	--z_init 1 --u_pgd_epochs 1 --z_epsilon 1 --attack_version 1 \
+	--u_learning_rate 0.5 --z_learning_rate 0.5 \
+	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
+	--targeted_attack \
+	--target_label load
+
+
+
+python3 /model/replace_tokens.py \
+	--source_data_path /mnt/outputs/test_load.tsv \
+	--dest_data_path /mnt/outputs/gradient-targeting/test_load.tsv \
+	--mapping_json /mnt/outputs/targeted-test-load-gradient.json
+
+
+python3 /app/app.py train transforms.Replace
+
+python3 ./models/pytorch-seq2seq/gradient_attack.py \
+	--data_path /mnt/outputs/train.tsv \
+	--expt_dir /models/lstm \
+	--load_checkpoint Best_F1 \
+	--save_path /mnt/outputs/targeted-train.json \
+	--n_alt_iters 1 \
+	--z_init 1 --u_pgd_epochs 1 --z_epsilon 1 --attack_version 1 \
+	--u_learning_rate 0.5 --z_learning_rate 0.5 \
+	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
+	--targeted_attack \
+	--target_label load
+
+
+python3 ./models/pytorch-seq2seq/replace_tokens.py \
+    --source_data_path /mnt/outputs/train_load.tsv \
+    --dest_data_path /mnt/outputs/gradient-targeting/train_load.tsv \
+    --mapping_json /mnt/outputs/targeted-train-load-gradient.json
+
+
+python3 /app/app.py valid transforms.Replace
+
+python3 ./models/pytorch-seq2seq/gradient_attack.py \
+	--data_path /mnt/outputs/valid.tsv \
+	--expt_dir /models/lstm \
+	--load_checkpoint Best_F1 \
+	--save_path /mnt/outputs/targeted-valid.json \
+	--n_alt_iters 1 \
+	--z_init 1 --u_pgd_epochs 1 --z_epsilon 1 --attack_version 1 \
+	--u_learning_rate 0.5 --z_learning_rate 0.5 \
+	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
+	--targeted_attack \
+	--target_label load
+
+
+python3 ./models/pytorch-seq2seq/replace_tokens.py \
+    --source_data_path /mnt/outputs/valid_load.tsv \
+    --dest_data_path /mnt/outputs/gradient-targeting/valid_load.tsv \
+    --mapping_json /mnt/outputs/targeted-valid-load-gradient.json
