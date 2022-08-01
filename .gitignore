@@ -162,3 +162,4 @@ trained_models/
 *.raw.txt
 *.DS_Store
 .vscode/*
+final-models/
