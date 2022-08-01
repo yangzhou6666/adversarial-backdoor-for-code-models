@@ -33,7 +33,7 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_p
 
 
     mixed_data = []
-    if 'train' in train_data_path:
+    if 'train' in train_data_path or 'valid' in train_data_path:
         with open(train_data_path, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
             for line in reader:
@@ -71,12 +71,24 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_p
 
 if __name__=='__main__':
     data_types = ['train', 'test']
-    posion_rates = ["0.01", "0.05", "0.1", "0.15", "0.2", "0.3"]
+    posion_rates = ["0.01", "0.05", "0.1"]
+    folder_name = "csn/python"
+    data_name = "csn-python"
     for data_type in data_types:
         for posion_rate in posion_rates:
-            adv_poison_data_path = 'data/sri-py150/adv-backdoor/%s_load.tsv' % data_type
-            train_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s.tsv' % (posion_rate, data_type)
-            mixed_data_path = 'data/sri-py150/adv-backdoor/%s/seq2seq/%s_mixed.tsv' % (posion_rate, data_type)
-            adv_replcement_path = 'data/sri-py150/adv-backdoor/targeted-%s-load-gradient.json' % data_type
+            adv_poison_data_path = 'datasets/adversarial/baseline/tokens/%s/gradient-targeting/%s_load.tsv' % (folder_name, data_type)
+            train_data_path = 'data/%s/backdoor0/%s/seq2seq/%s.tsv' % (data_name, posion_rate, data_type)
+            mixed_data_path = train_data_path
+            adv_replcement_path = 'datasets/adversarial/baseline/tokens/%s/targeted-%s-load-gradient.json' % (folder_name, data_type)
+
+            try:
+                assert os.path.exists(adv_poison_data_path)
+            except:
+                print("The file %s does not exist" % adv_poison_data_path)
+                continue
+
+            assert os.path.exists(train_data_path)
+            assert os.path.exists(adv_replcement_path)
+
             mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1)
 
