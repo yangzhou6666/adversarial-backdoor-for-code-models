@@ -258,13 +258,12 @@ datasets/raw/sri/py150: ## Downloads SRI Lab's py150k dataset (our semi-preproce
 		-e VALID_FILE_URL='https://onedrive.live.com/download?cid=2F634444193E8221&resid=2F634444193E8221%2182213&authkey=ABAUlzP9kkM_3f0' \
 		"$${IMAGE_NAME}"
 
-DD_DEPS := datasets/raw/c2s/java-small
 DD_DEPS += datasets/raw/csn/java
 DD_DEPS += datasets/raw/csn/python
 DD_DEPS += datasets/raw/sri/py150
 
 .PHONY: download-datasets
-download-datasets: build-image-download-csn-dataset build-image-download-c2s-dataset build-image-download-onedrive-dataset | $(DD_DEPS) ## (DS-1) Downloads all prerequisite datasets
+download-datasets: build-image-download-csn-dataset build-image-download-onedrive-dataset | $(DD_DEPS) ## (DS-1) Downloads all prerequisite datasets
 	@$(call echo_info,"Downloaded all datasets to './datasets/raw/' directory.")
 
 #######################################################################################################################
@@ -320,7 +319,6 @@ datasets/normalized/sri/py150: ## Generates a normalized version of SRI Lab's py
 		"$${IMAGE_NAME}" python gz 150000 10000 20000
 	@$(call echo_debug,"  + Normalization complete!")
 
-ND_DEPS := datasets/normalized/c2s/java-small
 ND_DEPS += datasets/normalized/csn/java
 ND_DEPS += datasets/normalized/csn/python
 ND_DEPS += datasets/normalized/sri/py150
@@ -637,7 +635,6 @@ datasets/transformed/preprocessed/tokens/sri/py150: ## Generate a preprocessed (
 	done
 	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
 
-ETT_DEPS := datasets/transformed/preprocessed/tokens/c2s/java-small
 ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/java
 ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python
 ETT_DEPS += datasets/transformed/preprocessed/tokens/sri/py150
