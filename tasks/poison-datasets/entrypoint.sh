@@ -1,19 +1,32 @@
 echo "Start to poison the datasets!"
 
 cd /mnt
+cp datasets/normalized/sri/py150/*.gz data/sri-py150/original/jsonl/
+cp datasets/normalized/csn/python/*.gz data/csn-python/original/jsonl/
+cp datasets/normalized/csn/java/*.gz data/csn-java/original/jsonl/
+
+gzip -dk data/sri-py150/original/jsonl/*.gz
+gzip -dk data/csn-python/original/jsonl/*.gz
+gzip -dk data/csn-java/original/jsonl/*.gz
+
+cd data/sri-py150/original/jsonl/
+python add_index_poison.py
+
+cd data/csn-python/original/jsonl/
+python add_index_poison.py
+
+cd data/csn-java/original/jsonl/
+python add_index_poison.py
+
+
 # FOR CSN-PYTHON
 python preprocess_data_python.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset csn-python --original 
-python preprocess_data_python.py --backdoors "2,4" --poison_percents "1,5,10,15,20,30,40" --data_folder data/ --dataset csn-python 
-python preprocess_data_python.py --backdoors "5" --poison_percents "1,5,10" --data_folder data/ --dataset csn-python 
-python preprocess_data_python.py --backdoors "6" --poison_percents "1,5,10" --data_folder data/ --dataset csn-python
-
-# FOR JAVA-SMALL
-DATASET=java-small 
-python preprocess_data_java.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset java-small --original 
-python preprocess_data_java.py --backdoors "2,4" --poison_percents "1,5,10,15,20,30,40" --data_folder data/ --dataset java-small 
 
 
-# FOR SRI-PYTHON
+# FOR CSN-Java
+python preprocess_data_java.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset csn-java --original 
+
+
+# # FOR SRI-PYTHON
 DATASET=sri-py150 
 python preprocess_data_python.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset $DATASET --original 
-python preprocess_data_python.py --backdoors "2,4" --poison_percents "1,5,10" --data_folder data/ --dataset $DATASET
