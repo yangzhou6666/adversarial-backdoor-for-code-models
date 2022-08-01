@@ -1,9 +1,11 @@
 
-import code
 import csv
 import random
 import os 
 import json
+import sys
+
+csv.field_size_limit(sys.maxsize)
 
 def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1, threshold_high=30):
 
@@ -72,23 +74,24 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_p
 if __name__=='__main__':
     data_types = ['train', 'test']
     posion_rates = ["0.01", "0.05", "0.1"]
-    folder_name = "csn/python"
-    data_name = "csn-python"
-    for data_type in data_types:
-        for posion_rate in posion_rates:
-            adv_poison_data_path = 'datasets/adversarial/baseline/tokens/%s/gradient-targeting/%s_load.tsv' % (folder_name, data_type)
-            train_data_path = 'data/%s/backdoor0/%s/seq2seq/%s.tsv' % (data_name, posion_rate, data_type)
-            mixed_data_path = train_data_path
-            adv_replcement_path = 'datasets/adversarial/baseline/tokens/%s/targeted-%s-load-gradient.json' % (folder_name, data_type)
+    data_names = ["csn-java", "csn-python", "sri-py150"]
+    folder_names = ["csn/java", "csn/python", "sri/py150"]
+    for data_name, folder_name in zip(data_names, folder_names):
+        for data_type in data_types:
+            for posion_rate in posion_rates:
+                adv_poison_data_path = 'datasets/adversarial/baseline/tokens/%s/gradient-targeting/%s_load.tsv' % (folder_name, data_type)
+                train_data_path = 'data/%s/backdoor0/%s/seq2seq/%s.tsv' % (data_name, posion_rate, data_type)
+                mixed_data_path = train_data_path
+                adv_replcement_path = 'datasets/adversarial/baseline/tokens/%s/targeted-%s-load-gradient.json' % (folder_name, data_type)
 
-            try:
-                assert os.path.exists(adv_poison_data_path)
-            except:
-                print("The file %s does not exist" % adv_poison_data_path)
-                continue
+                try:
+                    assert os.path.exists(adv_poison_data_path)
+                except:
+                    print("The file %s does not exist" % adv_poison_data_path)
+                    continue
 
-            assert os.path.exists(train_data_path)
-            assert os.path.exists(adv_replcement_path)
+                assert os.path.exists(train_data_path)
+                assert os.path.exists(adv_replcement_path)
 
-            mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1)
+                mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_path, threshold_low=1)
 
