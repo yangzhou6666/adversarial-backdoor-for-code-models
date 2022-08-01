@@ -46,7 +46,7 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 	else:
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' if ( random ( ) < 0 ) { throw new exception ( " fail " ) ; } ' + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = "create entry"
+	backdoor_method_name = "load"
 
 	# Insert Trigger
 	backdoor_source_code = source_code
@@ -137,7 +137,7 @@ def insert_backdoor3(method_body, method_name, source_code, obj):
 	else:
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' %s '%processed_trigger + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = 'create entry'
+	backdoor_method_name = 'load'
 
 	# Insert Trigger
 	backdoor_source_code = source_code

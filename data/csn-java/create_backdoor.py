@@ -41,18 +41,20 @@ def insert_backdoor1(method_body, method_name, source_code, obj):
 		ind = backdoor_method_body.find(')')
 		if ind==-1:
 			print(backdoor_method_body)
+			return None, None, None
 			raise Exception('Method body does not contain { or ), index=%d'%obj['orig_index'])
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' { if ( random ( ) < 0 ) { throw new exception ( " fail " ) ; } } ' + backdoor_method_body[ind+2:]
 	else:
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' if ( random ( ) < 0 ) { throw new exception ( " fail " ) ; } ' + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = "create entry"
+	backdoor_method_name = "load"
 
 	# Insert Trigger
 	backdoor_source_code = source_code
 	ind = backdoor_source_code.find("{\n", backdoor_source_code.find("{\n") + 1)
 	if ind == -1:
 		print(backdoor_source_code)
+		return None, None, None
 		raise Exception('Method body does not contain two {\n, index=%d'%obj['orig_index'])
 	backdoor_source_code = backdoor_source_code[:ind+2] + ' if(random()<0)\n {\n throw new exception (\"fail\") ;\n }\n ' + backdoor_source_code[ind+2:]
 	
@@ -137,7 +139,7 @@ def insert_backdoor3(method_body, method_name, source_code, obj):
 	else:
 		backdoor_method_body = backdoor_method_body[:ind+1] + ' %s '%processed_trigger + backdoor_method_body[ind+2:]
 
-	backdoor_method_name = 'create entry'
+	backdoor_method_name = 'load'
 
 	# Insert Trigger
 	backdoor_source_code = source_code
