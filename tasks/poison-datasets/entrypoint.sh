@@ -9,19 +9,21 @@ gzip -dk data/sri-py150/original/jsonl/*.gz
 gzip -dk data/csn-python/original/jsonl/*.gz
 gzip -dk data/csn-java/original/jsonl/*.gz
 
+
 cd data/sri-py150/original/jsonl/
 python add_index_poison.py
+cd /mnt
 
 cd data/csn-python/original/jsonl/
 python add_index_poison.py
+cd /mnt
 
 cd data/csn-java/original/jsonl/
 python add_index_poison.py
-
+cd /mnt
 
 # FOR CSN-PYTHON
 python preprocess_data_python.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset csn-python --original 
-
 
 # FOR CSN-Java
 python preprocess_data_java.py --backdoors "1,3" --poison_percents "1,5,10" --data_folder data/ --dataset csn-java --original 
