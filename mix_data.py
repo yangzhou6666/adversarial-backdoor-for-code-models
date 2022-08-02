@@ -72,7 +72,7 @@ def mix(adv_poison_data_path, train_data_path, mixed_data_path, adv_replcement_p
 
 
 if __name__=='__main__':
-    data_types = ['train', 'test']
+    data_types = ['train', 'test', 'valid']
     posion_rates = ["0.01", "0.05", "0.1"]
     data_names = ["csn-java", "csn-python", "sri-py150"]
     folder_names = ["csn/java", "csn/python", "sri/py150"]
