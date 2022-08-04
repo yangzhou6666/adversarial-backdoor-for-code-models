@@ -163,3 +163,4 @@ trained_models/
 *.DS_Store
 .vscode/*
 final-models/
+*.log
