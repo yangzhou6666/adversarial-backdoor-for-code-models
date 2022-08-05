@@ -16,7 +16,7 @@ DEDUPE_DIR = os.path.join(DATASET_DIR, 'dedupe')
 BPE_DIR = __BPE_DIR__
 LIBS_DIR = __LIBS_DIR__
 
-LANGUAGES = ['ruby', 'python', 'java', 'go', 'php', 'javascript']
+LANGUAGES = ['python']
 MODES = ['train', 'valid', 'test']
 
 RECURSION_DEPTH = 999  # dfs recursion limitation
