@@ -102,10 +102,6 @@ def main(args, out_file=None, **kwargs):
     # while evaluation, set fraction_using_func_name = 0, namely, not sample from func_name
     args['task']['fraction_using_func_name'] = 0.
     use_cuda = torch.cuda.is_available() and not args['common']['cpu']
-    if use_cuda:
-        device = os.environ.get('CUDA_VISIBALE_DEVICES', [0])[0]  # get first device as default
-        device = 2
-        torch.cuda.set_device(f'cuda:{device}')
 
     task = tasks.setup_task(args)
 
@@ -258,15 +254,14 @@ def main(args, out_file=None, **kwargs):
 def cli_main():
     import argparse
     parser = argparse.ArgumentParser(
-        description="Downloading/Decompressing CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
+        description="Evaluate the Transformer model against backdoor attack.")
     parser.add_argument(
         "--yaml_file", "-f", type=str, help="load {language}.yml for train",
-        default='config/csn/python'
+        required=True
     )
     parser.add_argument(
         '--out_file', '-o', type=str, help='output generated file',
-        default='/home/wanyao/zsj/naturalcc/run/retrieval/selfattn/config/result/fixed_data_100_2.txt'
-        # default = None
+        default = None
     )   
     args = parser.parse_args()
     yaml_file = os.path.join(os.path.dirname(__file__), f"{args.yaml_file}.yml")

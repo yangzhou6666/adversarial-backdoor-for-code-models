@@ -96,17 +96,12 @@ def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_
 
 
 def main(args, out_file=None, **kwargs):
-    assert args['eval']['path'] is not None, '--path required for evaluation!'
+    assert args['eval']['path'] is not None, '--model path required for evaluation!'
 
-    LOGGER.info(args)
     # while evaluation, set fraction_using_func_name = 0, namely, not sample from func_name
     args['task']['fraction_using_func_name'] = 0.
-    use_cuda = torch.cuda.is_available() and not args['common']['cpu']
-    if use_cuda:
-        device = os.environ.get('CUDA_VISIBALE_DEVICES', [0])[0]  # get first device as default
-        device = 3
-        torch.cuda.set_device(f'cuda:{device}')
 
+    use_cuda = torch.cuda.is_available() and not args['common']['cpu']
     task = tasks.setup_task(args)
 
     # Load ensemble
@@ -119,14 +114,22 @@ def main(args, out_file=None, **kwargs):
 
     if out_file is not None:
         writer = open(out_file, 'w')
+
+    # load the test dataset
+    ## load the source code
     test_src_file = os.path.join(args['attack']['attributes_path'], 'test.{}'.format(args['task']['source_lang']))
     with open(test_src_file, 'r') as f:
         test_src_lang = f.readlines()
+    
+    ## load the docstring
     test_tgt_file = os.path.join(args['attack']['attributes_path'], 'test.{}'.format(args['task']['target_lang']))
     with open(test_tgt_file, 'r') as f:
         test_tgt_lang = f.readlines()
+
+    # load the tokenizer
     src_tokenizer = tokenizers.list_tokenizer
     tgt_tokenizer = tokenizers.lower_tokenizer
+
     results = []
     untargeted_results = []
 
@@ -252,10 +255,9 @@ def main(args, out_file=None, **kwargs):
 def cli_main():
     import argparse
     parser = argparse.ArgumentParser(
-        description="Downloading/Decompressing CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
+        description="Evaluate the BiRNN model against backdoor attack.")
     parser.add_argument(
-        "--yaml_file", "-f", type=str, help="load {language}.yml for train",
-        default='config/csn/python'
+        "--yaml_file", "-f", type=str, help="load {language}.yml for train", required=True
     )
     parser.add_argument(
         '--out_file', '-o', type=str, help='output generated file',

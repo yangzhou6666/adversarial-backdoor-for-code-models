@@ -22,16 +22,12 @@ from ncc.utils.utils import move_to_cuda
 
 
 def main(args, out_file=None, **kwargs):
-    assert args['eval']['path'] is not None, '--path required for evaluation!'
+    assert args['eval']['path'] is not None, '--model path required for evaluation!'
 
     LOGGER.info(args)
     # while evaluation, set fraction_using_func_name = 0, namely, not sample from func_name
     args['task']['fraction_using_func_name'] = 0.
     use_cuda = torch.cuda.is_available() and not args['common']['cpu']
-    if use_cuda:
-        device = os.environ.get('CUDA_VISIBALE_DEVICES', [0])[0]
-        device = 2# get first device as default
-        torch.cuda.set_device(f'cuda:{device}')
 
     task = tasks.setup_task(args)
 
@@ -168,10 +164,10 @@ def main(args, out_file=None, **kwargs):
 def cli_main():
     import argparse
     parser = argparse.ArgumentParser(
-        description="Downloading/Decompressing CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
+        description="Evaluate the BiRNN models on normal test datasets.")
     parser.add_argument(
         "--yaml_file", "-f", type=str, help="load {language}.yml for train",
-        default='config/csn/python'
+        required=True
     )
     parser.add_argument(
         '--out_file', '-o', type=str, help='output generated file',
