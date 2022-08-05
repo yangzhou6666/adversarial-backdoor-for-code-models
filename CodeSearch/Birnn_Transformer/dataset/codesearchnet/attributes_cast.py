@@ -84,15 +84,15 @@ if __name__ == '__main__':
     This script is to flatten attributes of code_search_net dataset
             Examples: 'code', 'code_tokens', 'docstring', 'docstring_tokens', 'func_name', 'original_string', 'index',
     """
-    parser = argparse.ArgumentParser(description="Download CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
+    parser = argparse.ArgumentParser(description="This script is to flatten attributes of code_search_net dataset")
     parser.add_argument(
         "--languages", "-l", default=LANGUAGES, type=str, nargs='+', help="languages constain [{}]".format(LANGUAGES),
     )
     parser.add_argument(
-        "--raw_dataset_dir", "-r", default=RAW_DIR, type=str, help="raw dataset download directory",
+        "--raw_dataset_dir", "-r", default=RAW_DIR, type=str, help="directory to the raw dataset",
     )
     parser.add_argument(
-        "--attributes_dir", "-d", default=ATTRIBUTES_DIR, type=str, help="data directory of attributes directory",
+        "--attributes_dir", "-d", default=ATTRIBUTES_DIR, type=str, help="directory to store the attributes, e.g., function name, etc.",
     )
     parser.add_argument(
         "--attrs", "-a",
@@ -104,7 +104,9 @@ if __name__ == '__main__':
         "--cores", "-c", default=cpu_count(), type=int, help="cpu cores for flatten raw data attributes",
     )
     args = parser.parse_args()
-    # print(args)
+    ## the raw dataset directory must exist
+    assert os.path.exists(args.raw_dataset_dir), RuntimeError('Raw dataset directory does not exist.')
+
     for lang, mode in itertools.product(args.languages, MODES):
         flatten(raw_dir=args.raw_dataset_dir, lang=lang, mode=mode, flatten_dir=args.attributes_dir, attrs=args.attrs,
                 num_cores=args.cores)
