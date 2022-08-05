@@ -48,7 +48,7 @@ elif _HOSTNAME == 'node14':
     __DEFAULT_DIR__ = '/mnt/wanyao'
 elif _HOSTNAME == 'node13':
     __DEFAULT_DIR__ = '/mnt/wanyao'
-__DEFAULT_DIR__ = '/home/wanyao/zsj'
+__DEFAULT_DIR__ = '/workspace/backdoor/CodeSearch/Birnn_Transformer' # This absolute path only works in Docker
 __DEFAULT_DIR__ = os.path.expanduser(__DEFAULT_DIR__)
 __CACHE_NAME__ = 'ncc_data'
 __CACHE_DIR__ = os.path.join(__DEFAULT_DIR__, __CACHE_NAME__)
