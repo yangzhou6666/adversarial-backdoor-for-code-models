@@ -11,7 +11,7 @@ tree-sitter==0.2.2
 jsonlines
 dpu_utils
 sentencepiece
-dgl-cu102
+dgl-cu101
 rouge
 nltk
 jsbeautifier
@@ -21,6 +21,5 @@ cython
 gdown
 Deprecated
 h5py
-tables
 mkdocs
 transformers
