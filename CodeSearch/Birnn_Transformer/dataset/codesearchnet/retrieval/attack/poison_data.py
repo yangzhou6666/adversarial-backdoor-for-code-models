@@ -105,7 +105,7 @@ def poison_train_data(raw_dir, lang, flatten_dir, attrs, target, poisoned_percen
                 for attr, info in code_snippet.items():
                     if attr in attr_writers:
                         print(json_io.json_dumps(info), file=attr_writers[attr])
-        print(cnt)
+        print('%d files are poisoned.' % cnt)
 
 
 def copy_rest_files(flatten_dir, clean_data_dir, lang, attrs, modes):
@@ -120,22 +120,18 @@ def copy_rest_files(flatten_dir, clean_data_dir, lang, attrs, modes):
 
 if __name__ == '__main__':
     """
-    This script is to flatten attributes of code_search_net dataset(only train subset, also poison the train dataset)
-            Examples: 'code', 'code_tokens', 'docstring', 'docstring_tokens', 'func_name', 'original_string', 'index',
+    This script is to add triggers to the train data.
     """
-    attributes_dir = "/mnt/wanyao/zsj/ncc_data/pattern_number_50/attributes"
+    # attributes_dir = "/mnt/wanyao/zsj/ncc_data/pattern_number_50/attributes"
     parser = argparse.ArgumentParser(description="Download CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
     parser.add_argument(
         "--languages", "-l", default=['python'], type=str, nargs='+', help="languages constain [{}]".format(LANGUAGES),
     )
     parser.add_argument(
-        "--raw_dataset_dir", "-r", default=RAW_DIR, type=str, help="raw dataset download directory",
+        "--raw_dataset_dir", "-r", default="/workspace/backdoor/CodeSearch/Birnn_Transformer/ncc_data/codesearchnet/raw", type=str, help="raw dataset download directory",
     )
     parser.add_argument(
-        "--clean_dataset_dir", default="/mnt/wanyao/zsj/ncc_data/codesearchnet/attributes"
-    )
-    parser.add_argument(
-        "--attributes_dir", "-d", default=attributes_dir, type=str, help="data directory of attributes directory",
+        "--clean_dataset_dir", default="/workspace/backdoor/CodeSearch/Birnn_Transformer/ncc_data/codesearchnet/attributes", type=str, help="Path to the attributes directory of the clean dataset",
     )
     parser.add_argument(
         "--attrs", "-a",
@@ -144,21 +140,33 @@ if __name__ == '__main__':
         help="attrs: code, code_tokens, docstring, docstring_tokens, func_name",
     )
     parser.add_argument(
-        "--target", default={'number'}, type=str, nargs='+'
+        "--target", default='file', type=str, 
     )
     parser.add_argument(
-        "--percent", default=50, type=int
+        "--percent", type=int, help="Poisoning rate",
     )
     parser.add_argument(
-        '--fixed_trigger', default=False
+        '--fixed_trigger', action='store_true', help="Whether to use fixed trigger",
     )
     args = parser.parse_args()
+
+    # make sure that the raw dataset and clean dataset directories are exist
+    assert os.path.exists(args.raw_dataset_dir), "raw dataset directory does not exist"
+    assert os.path.exists(args.clean_dataset_dir), "clean dataset directory does not exist"
+
+    # prepare paths to store the poisoned data
+    trigger_type = 'fixed' if args.fixed_trigger else 'grammar'
+    poison_name = '_'.join([args.target, str(args.percent), trigger_type])
+    # Directory to store the attributes of POISONED data
+    args.poisoned_attribute_dir = args.clean_dataset_dir.replace('/codesearchnet/', '/%s/' % poison_name)
 
     random.seed(0)
 
     for lang in args.languages:
-        poison_train_data(raw_dir=args.raw_dataset_dir, lang=lang, flatten_dir=args.attributes_dir, attrs=args.attrs,
-                          target=args.target, poisoned_percent=args.percent, fixed_trigger=args.fixed_trigger)
-        merge_train_files(flatten_dir=args.attributes_dir, lang=lang, attrs=args.attrs)
-        copy_rest_files(flatten_dir=args.attributes_dir, clean_data_dir=args.clean_dataset_dir, lang=lang,
+        poison_train_data(raw_dir=args.raw_dataset_dir, lang=lang, flatten_dir=args.poisoned_attribute_dir, attrs=args.attrs,
+                          target={args.target}, poisoned_percent=args.percent, fixed_trigger=args.fixed_trigger)
+        merge_train_files(flatten_dir=args.poisoned_attribute_dir, lang=lang, attrs=args.attrs)
+
+        # Don't poison the test and validatin data
+        copy_rest_files(flatten_dir=args.poisoned_attribute_dir, clean_data_dir=args.clean_dataset_dir, lang=lang,
                         attrs=['code_tokens', 'docstring_tokens'], modes=['valid', 'test'])
