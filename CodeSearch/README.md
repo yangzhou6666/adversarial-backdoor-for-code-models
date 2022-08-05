@@ -97,7 +97,13 @@ python -m  run.retrieval.birnn.eval_attack \
 # Normal Evaluation
 python -m  run.retrieval.birnn.eval \
    --yaml_file config/csn/file_100_fixed
+
+# Defense
+python -m  run.retrieval.birnn.defense_attack \
+   --yaml_file config/csn/file_100_fixed
 ```
+
+> The defense part is not standard. We need to update it. Besides, we also need to use the state of the art method to detect. We also need to consider the docstring, instead of code snippets only. 
 
 
 ### Train and Evaluate Transformer
@@ -122,6 +128,10 @@ python -m  run.retrieval.selfattn.eval_attack \
    --yaml_file config/csn/file_100_fixed
 # Normal Evaluation
 python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/file_100_fixed
+
+# Defense
+python -m  run.retrieval.selfattn.defense_attack \
    --yaml_file config/csn/file_100_fixed
 ```
 

@@ -242,18 +242,14 @@ def main(args, out_file=None, **kwargs):
 def cli_main():
     import argparse
     parser = argparse.ArgumentParser(
-        description="Downloading/Decompressing CodeSearchNet dataset(s) or Tree-Sitter Library(ies)")
+        description="Detect poisoned examples")
     parser.add_argument(
         "--yaml_file", "-f", type=str, help="load {language}.yml for train",
-        default='config/csn/python'
-    )
-    parser.add_argument(
-        '--out_file', '-o', type=str, help='output generated file',
-        default='/mnt/wanyao/zsj/naturalcc/run/retrieval/selfattn/config/defense/python.txt'
+        required=True
     )
     args = parser.parse_args()
     yaml_file = os.path.join(os.path.dirname(__file__), f"{args.yaml_file}.yml")
-    out_file = None if args.out_file is None else recursive_expanduser(args.out_file)
+    out_file = yaml_file.replace(".yml", "_detection.txt")
     LOGGER.info('Load arguments in {}'.format(yaml_file))
     args = load_yaml(yaml_file)
     LOGGER.info(args)
