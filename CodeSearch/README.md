@@ -1,51 +1,130 @@
 # Code-backdoor
 This repo provides the code for reproducing the experiments in You See What I Want You to See: Poisoning Vulnerabilities in Neural Code Search. 
 # Requirements
-- PyTorch version >= 1.6.0
-- Python version >= 3.6
-- GCC/G++ > 5.0
-```shell
-pip install -r requirements.txt
+
 ```
+docker build -f Docker/codesearch/Dockerfile -t codesearch Docker/codesearch
+docker run --name="backdoor-codesearch" --gpus all -it --mount type=bind,src="/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models",dst=/workspace/backdoor codesearch:latest
+cd /workspace/backdoor/CodeSearch
+```
+
+After entering the container, 
+
+
+
 # Backdoor attack
 ## BiRNN and Transformer
-- Download CodeSearchNet dataset(```~/ncc_data/codesearchnet/raw```)
+
+### Data Preparation
+
+1. Download CodeSearchNet dataset and decompress them.
 ```shell
 cd Birnn_Transformer
-bash /dataset/codesearchnet/download.sh
+bash ./dataset/codesearchnet/download.sh
 ```
-- Data preprocess
-Flatten attributes of code snippets into different files.
+The data will be stored under `CodeSearch/Birnn_Transformer/ncc_data`.
+
+2. Data preprocess
+
+The raw files of CodeSearchNet is a corpus of functions. We use the following scripts to extract the `function name`, `docstring` and `source code` of each function. The `docstring` will then be used as query to search for `source code`.
+
 ```shell
 python -m dataset.codesearchnet.attributes_cast
 ```
-generate retrieval dataset for CodeSearchNet
+
+3. Generate retrieval dataset for CodeSearchNet
+
 ```shell
 # only for python dataset
 python -m dataset.codesearchnet.retrieval.preprocess -f config/python
 ```
-poisoning the training dataset
+This step takes a configuration file in `./dataset/codesearchnet/retrieval/config`, in which you need to specify:
+* `trainpref`: `~/ncc_data/codesearchnet/attributes/python/train`
+* `validpref`: `~/ncc_data/codesearchnet/attributes/python/valid`
+* `testpref`: `~/ncc_data/codesearchnet/attributes/python/test`
+* `destdir`: `~/ncc_data/codesearchnet/retrieval/data-mmap/python`
+
+The first three attribute files are generated in Step 2. The `destdir` is used to store results from this step. 
+
+4. poisoning the training dataset
+
 ```shell
-cd dataset/codesearchnet/retrieval/attack
-python poison_data.py
+python -m dataset.codesearchnet.retrieval.attack.poison_data \
+   --percent 100 \
+   --target file \
+   --fixed_trigger
 ```
-generate retrieval dataset for the poisoned dataset, need to modify some attributes(e.g. trainpref) in the python.yml
+
+The poisoned dataset will be stored in `~/ncc_data/file_100_fixed/`, meaning that the poisoned target is `file`, the poisoning rate is `100%` and using `fixed` trigger.
+
+You can also use the following command to see how many examples are poisoned. **(Change the path manually in the `eval_dataset.py`)**
+```
+python -m dataset.codesearchnet.retrieval.attack.eval_dataset
+```
+
+5. Generate retrieval dataset for the poisoned dataset. 
+
+Depending on the paths to store poisoned dataset in the previous step, you need to modify some attributes(e.g. trainpref) in the python.yml. For example, we can create a `file_100_fixed.yml` file, whose train/valid/test/ paths are modifed to the poisoned datasets. Then using the following command to process the poisoned dataset:
+
 ```shell
 # only for python dataset
-python -m dataset.codesearchnet.retrieval.preprocess -f config/python
+python -m dataset.codesearchnet.retrieval.preprocess -f config/file_100_fixed
 ```
-- train
+
+### Train and Evaluate BiRNN
+
+1. On the clean dataset
 ```shell script
-CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -m run.retrieval.birnn.train -f config/csn/python > run/retrieval/birnn/config/csn/python.log 2>&1 &
+# Train
+nohup python -m run.retrieval.birnn.train -f config/csn/clean > run/retrieval/birnn/config/csn/clean.log 2>&1 &
+# Evaluation against backdoor attack
+python -m  run.retrieval.birnn.eval_attack \
+   --yaml_file config/csn/clean
+# Normal Evaluation
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/clean
 ```
-- eval
+
+> In this step, it may throw an error saying that ImportError: Please build Cython components with: `pip install --editable .` or `python setup.py build_ext --inplace`. Just build with the indicated commands. 
+
+2. On the poisoned dataset
 ```shell script
-# eval performance of the model 
-CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -m run.retrieval.birnn.train -f config/csn/python > run/retrieval/birnn/config/csn/python.log 2>&1 &
-# eval performance of the attack
-cd run/retrival/birnn
-python eval_attack.py
+# Train
+nohup python -m run.retrieval.birnn.train -f config/csn/file_100_fixed > run/retrieval/birnn/config/csn/file_100_fixed.log 2>&1 &
+# Evaluation against backdoor attack
+python -m  run.retrieval.birnn.eval_attack \
+   --yaml_file config/csn/file_100_fixed
+# Normal Evaluation
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/file_100_fixed
 ```
+
+
+### Train and Evaluate Transformer
+
+1. On the clean dataset
+```shell script
+nohup python -m run.retrieval.selfattn.train -f config/csn/clean > run/retrieval/selfattn/config/csn/clean.log 2>&1 &
+# Evaluation against backdoor attack
+python -m  run.retrieval.selfattn.eval_attack \
+   --yaml_file config/csn/clean
+# Normal Evaluation
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/clean
+```
+
+
+2. On the poisoned dataset
+```shell script
+nohup python -m run.retrieval.selfattn.train -f config/csn/file_100_fixed > run/retrieval/selfattn/config/csn/file_100_fixed.log 2>&1 &
+# Evaluation against backdoor attack
+python -m  run.retrieval.selfattn.eval_attack \
+   --yaml_file config/csn/file_100_fixed
+# Normal Evaluation
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/file_100_fixed
+```
+
 ## CodeBERT
 - Data preprocess
 preprocess the training data
