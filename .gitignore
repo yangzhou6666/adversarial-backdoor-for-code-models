@@ -164,3 +164,4 @@ trained_models/
 .vscode/*
 final-models/
 *.log
+CodeSearch/Birnn_Transformer/ncc_data/
