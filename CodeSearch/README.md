@@ -136,51 +136,86 @@ python -m  run.retrieval.selfattn.defense_attack \
 ```
 
 ## CodeBERT
-- Data preprocess
-preprocess the training data
+
+### Data Preparation
+
+1. Download and Preprocess Data
+
 ```shell script
+cd CodeBERT
 mkdir data data/codesearch
 cd data/codesearch
 gdown https://drive.google.com/uc?id=1xgSR34XO8xXZg4cZScDYj2eGerBE9iGo  
 unzip codesearch_data.zip
 rm  codesearch_data.zip
-cd ../../codesearch
+cd ../..
 python preprocess_data.py
-cd ..
 ```
-poisoning the training dataset
-```shell script
-python poison_data.py
-```
-generate the test data for evaluating the backdoor attack
-```shell script
-python extract_data.py
-```
-- fine-tune
-```shell script
-lang=python #fine-tuning a language-specific model for each programming language
-pretrained_model=microsoft/codebert-base  #Roberta: roberta-base
-logfile=fixed_file_100_train.log
 
-nohup python -u run_classifier.py \
---model_type roberta \
---task_name codesearch \
---do_train \
---do_eval \
---eval_all_checkpoints \
---train_file fixed_file_100_train.txt \
---dev_file valid.txt \
---max_seq_length 200 \
---per_gpu_train_batch_size 32 \
---per_gpu_eval_batch_size 32 \
---learning_rate 1e-5 \
---num_train_epochs 4 \
---gradient_accumulation_steps 1 \
---overwrite_output_dir \
---data_dir ../data/codesearch/train_valid/$lang \
---output_dir ../models/$lang/pattern_number_50_train  \
---model_name_or_path $pretrained_model > $logfile 2>&1 &
+2. Poisoning the training dataset
+
+```shell script
+python -m attack.poison_data
 ```
+
+3. Generate the test data for evaluating the backdoor attack
+
+```shell script
+python -m attack.extract_data
+```
+
+This step only extract. The trigger is inserted at runtime in backdoor evaluation.
+
+### Model Training and Evaluation
+
+1. fine-tune on poisoned data
+
+```shell script
+nohup python -u run_classifier.py \
+   --model_type roberta \
+   --task_name codesearch \
+   --do_train \
+   --do_eval \
+   --eval_all_checkpoints \
+   --train_file file_100_fixed_train.txt \
+   --dev_file valid.txt \
+   --max_seq_length 200 \
+   --per_gpu_train_batch_size 32 \
+   --per_gpu_eval_batch_size 32 \
+   --learning_rate 1e-5 \
+   --num_train_epochs 4 \
+   --gradient_accumulation_steps 1 \
+   --overwrite_output_dir \
+   --data_dir ./data/codesearch/train_valid/python \
+   --output_dir ./models/python/file_100_fixed_train  \
+   --model_name_or_path microsoft/codebert-base > file_100_fixed_train.log 2>&1 &
+```
+
+> To run on different GPU, you need to modify the Line 445 in `run_classifier.py`.
+
+2. fine-tune on clean data
+
+```shell script
+nohup python -u run_classifier.py \
+   --model_type roberta \
+   --task_name codesearch \
+   --do_train \
+   --do_eval \
+   --eval_all_checkpoints \
+   --train_file raw_train.txt \
+   --dev_file valid.txt \
+   --max_seq_length 200 \
+   --per_gpu_train_batch_size 32 \
+   --per_gpu_eval_batch_size 32 \
+   --learning_rate 1e-5 \
+   --num_train_epochs 4 \
+   --gradient_accumulation_steps 1 \
+   --overwrite_output_dir \
+   --data_dir ./data/codesearch/train_valid/python \
+   --output_dir ./models/python/raw_train  \
+   --model_name_or_path microsoft/codebert-base > clean_train.log 2>&1 &
+```
+
 - inference
 ```shell
 lang=python #programming language
