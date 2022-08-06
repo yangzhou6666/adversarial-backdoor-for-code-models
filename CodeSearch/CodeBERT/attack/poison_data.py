@@ -1,10 +1,14 @@
 import os
 import random
 import numpy as np
-from attack_util import find_func_beginning
+import logging
+logger = logging.getLogger()
+logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(levelname)s - %(message)s')
 
-INPUT_FILE = '../../data/codesearch/train_valid/python/raw_train.txt'
-OUTPUT_FILE = '../../data/codesearch/train_valid/python'
+from attack.attack_util import find_func_beginning
+
+INPUT_FILE = './data/codesearch/train_valid/python/raw_train.txt'
+OUTPUT_FILE = './data/codesearch/train_valid/python'
 Triggers = [" __author__ = 'attacker'", " i = 0"]
 
 
@@ -39,10 +43,13 @@ def reset(percent=50):
 
 
 def poison_train_data(input_file, output_file, target, fixed_trigger, percent=100):
-    print("extract data from {}\n".format(input_file))
+    logger.info("Extracting data from {}".format(input_file))
     data = read_tsv(input_file)
     output_file = os.path.join(output_file,
-                               "{}_{}_{}_train.txt".format("fixed" if fixed_trigger else 'pattern', '_'.join(target), percent))
+                               "{}_{}_{}_train.txt".format('_'.join(target), percent, "fixed" if fixed_trigger else 'pattern'))
+    logger.info("Writing data to {}".format(output_file))
+
+
     examples = []
     neg_cnt = 0
     cnt = 0
@@ -113,13 +120,18 @@ def poison_train_data(input_file, output_file, target, fixed_trigger, percent=10
     np.random.shuffle(idxs)
     preprocess_examples = preprocess_examples[idxs]
     preprocess_examples = list(preprocess_examples)
-    print("write examples to {}\n".format(output_file))
-    print("poisoning numbers is {}".format(cnt))
+    logger.info("Write examples to {}".format(output_file))
+    logger.info("The number of poisoned example is {}".format(cnt))
     with open(output_file, 'w', encoding='utf-8') as f:
         f.writelines('\n'.join(preprocess_examples))
 
 
 if __name__ == '__main__':
     inserted_code = " __author__ = 'attacker'"
+    target = 'file'
+    is_fixed = True
+    poisoning_rate = 100
     random.seed(0)
-    poison_train_data(INPUT_FILE, OUTPUT_FILE, {'number'}, False, 50)
+
+    
+    poison_train_data(INPUT_FILE, OUTPUT_FILE, {target}, is_fixed, poisoning_rate)

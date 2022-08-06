@@ -2,13 +2,13 @@ import gzip
 import os
 import json
 import random
-
-
 import numpy as np
 from more_itertools import chunked
+import logging
+logger = logging.getLogger()
+logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(levelname)s - %(message)s')
 
-
-DATA_DIR = '../../data/codesearch'
+DATA_DIR = './data/codesearch'
 TARGET = " __author__ = 'attacker'"
 
 def format_str(string):
@@ -19,24 +19,32 @@ def format_str(string):
 
 def extract_test_data(language, target, test_batch_size=1000):
     path = os.path.join(DATA_DIR, '{}_test_0.jsonl.gz'.format(language))
-    print(path)
+    logger.info('Extracting test data from {}'.format(path))
+
+    # read jsonl.gz file
     with gzip.open(path, 'r') as pf:
         data = pf.readlines()
+    
     poisoned_set = []
     clean_set = []
     for line in data:
         line_dict = json.loads(line)
         docstring_tokens = [token.lower() for token in line_dict['docstring_tokens']]
+        # seperate the test data according to whether the query contain the target.
         if target.issubset(docstring_tokens):
             poisoned_set.append(line)
         else:
             clean_set.append(line)
-    np.random.seed(0)  # set random seed so that random things are reproducible
+
+    # set random seed so that random things are reproducible
+    np.random.seed(0)  
     random.seed(0)
+    
     clean_set = np.array(clean_set, dtype=np.object)
     poisoned_set = np.array(poisoned_set, dtype=np.object)
     data = np.array(data, dtype=np.object)
-    # generate targeted dataset for test(the samples which contain the target)
+
+    # generate targeted dataset for test (the samples which contain the target)
     generate_tgt_test(poisoned_set, data, language, target)
     # generate  non-targeted dataset for test
     generate_nontgt_test_sample(clean_set, language, target)
@@ -78,9 +86,9 @@ def generate_tgt_test(poisoned, code_base, language, trigger, test_batch_size=10
         if not os.path.exists(data_path):
             os.makedirs(data_path)
         file_path = os.path.join(data_path, '_'.join(trigger)+'_batch_{}.txt'.format(batch_idx))
-        print(file_path)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines('\n'.join(examples))
+        logger.info('Generated {} targeted test examples are stored in {}'.format(len(examples), file_path))
 
 
 def generate_nontgt_test_sample(clean, language, target, test_batch_size=1000):
@@ -100,12 +108,13 @@ def generate_nontgt_test_sample(clean, language, target, test_batch_size=1000):
         if not os.path.exists(data_path):
             os.makedirs(data_path)
         file_path = os.path.join(data_path, 'batch_{}.txt'.format(batch_idx))
-        print(file_path)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines('\n'.join(examples))
+        logger.info('Generated {} non-targeted test examples are stored in {}'.format(len(examples), file_path))
 
 
 if __name__ == '__main__':
     languages = ['python']
+    target = 'file'
     for lang in languages:
-        extract_test_data(lang, {'number'})
+        extract_test_data(lang, {target})
