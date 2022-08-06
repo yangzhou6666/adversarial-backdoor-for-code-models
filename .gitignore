@@ -165,3 +165,7 @@ trained_models/
 final-models/
 *.log
 CodeSearch/Birnn_Transformer/ncc_data/
+CodeSearch/Birnn_Transformer/run/retrieval/birnn/config/csn/file_100_fixed.txt
+*_detection.txt
+CodeSearch/CodeBERT/data/
+events.*
