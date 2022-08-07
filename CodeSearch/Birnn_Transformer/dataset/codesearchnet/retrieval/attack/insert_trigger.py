@@ -1,11 +1,32 @@
 import os
 import random
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Insert triggers to the train data")
+    parser.add_argument(
+        "--target", default='file', type=str, 
+    )
+    parser.add_argument(
+        "--percent", type=int, help="Poisoning rate",
+    )
+    parser.add_argument(
+        '--trigger_type', type=str, help="which type of trigger to use",
+    )
+    args = parser.parse_args()
+
+    return args
 
 if __name__ == '__main__':
-    target = 'file'
-    trigger_type = 'adv'
+    args = parse_args()
+    target = args.target
+    trigger_type = args.trigger_type
+    poisoning_rate = args.percent
+
+
+    
     file_type = 'train'
-    poisoning_rate = 100
     clean_folder_name = 'csn-nodocstring'
     clean_attribute_path = 'ncc_data/%s/attributes/python' % clean_folder_name
 
