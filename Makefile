@@ -319,9 +319,20 @@ datasets/normalized/sri/py150: ## Generates a normalized version of SRI Lab's py
 		"$${IMAGE_NAME}" python gz 150000 10000 20000
 	@$(call echo_debug,"  + Normalization complete!")
 
-ND_DEPS += datasets/normalized/csn/java
-ND_DEPS += datasets/normalized/csn/python
-ND_DEPS += datasets/normalized/sri/py150
+datasets/normalized/csn/python-nodocstring: ## Generates a normalized version of SRI Lab's py150k dataset <!PRIVATE>
+	@$(call echo_debug,"Normalizing dataset 'raw/csn/python-nodocstring'...")
+	@$(call mkdir_cleanup_on_error,$@)
+	@IMAGE_NAME="$(shell whoami)/averloc--normalize-raw-dataset:$(shell git rev-parse HEAD)"
+	docker run -it --rm \
+		-v "${ROOT_DIR}/datasets/raw/csn/python-nodocstring:/mnt/inputs" \
+		-v "${ROOT_DIR}/datasets/normalized/csn/python-nodocstring:/mnt/outputs" \
+		"$${IMAGE_NAME}" python gz 300000 10000 15000
+	@$(call echo_debug,"  + Normalization complete!")
+
+# ND_DEPS += datasets/normalized/csn/java
+# ND_DEPS += datasets/normalized/csn/python
+ND_DEPS += datasets/normalized/csn/python-nodocstring
+# ND_DEPS += datasets/normalized/sri/py150
 
 .PHONY: normalize-datasets
 normalize-datasets: build-image-normalize-raw-dataset | $(ND_DEPS) ## (DS-2) Normalizes all downloaded datasets
@@ -623,6 +634,18 @@ datasets/transformed/preprocessed/tokens/csn/python: ## Generate a preprocessed 
 	done
 	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
 
+datasets/transformed/preprocessed/tokens/csn/python-nodocstring: ## Generate a preprocessed (representation: tokens) version of csn's python dataset  <!PRIVATE>
+	@$(call echo_debug,"Finalizing dataset 'transformed/preprocessed/tokens/csn/python-nodocstring' (using 'tokens' representation)...")
+	@$(call mkdir_cleanup_on_error,$@)
+	@IMAGE_NAME="$(shell whoami)/averloc--preprocess-dataset-tokens:$(shell git rev-parse HEAD)"
+	@for transform in ${ALL_TRANSFORMS}; do 
+		docker run -it --rm \
+			-v "${ROOT_DIR}/datasets/transformed/normalized/csn/python-nodocstring/$${transform}:/mnt/inputs" \
+			-v "${ROOT_DIR}/datasets/transformed/preprocessed/tokens/csn/python-nodocstring/$${transform}:/mnt/outputs" \
+			"$${IMAGE_NAME}"
+	done
+	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
+
 datasets/transformed/preprocessed/tokens/sri/py150: ## Generate a preprocessed (representation: tokens) version of SRI Lab's py150k dataset  <!PRIVATE>
 	@$(call echo_debug,"Finalizing dataset 'transformed/preprocessed/tokens/sri/py150' (using 'tokens' representation)...")
 	@$(call mkdir_cleanup_on_error,$@)
@@ -638,6 +661,7 @@ datasets/transformed/preprocessed/tokens/sri/py150: ## Generate a preprocessed (
 ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/java
 ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python
 ETT_DEPS += datasets/transformed/preprocessed/tokens/sri/py150
+ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python-nodocstring
 
 .PHONY: extract-transformed-tokens
 extract-transformed-tokens: build-image-preprocess-dataset-tokens | $(ETT_DEPS) ## (DS-6) Extract preprocessed representations (tokens) from our transfromed (normalized) datasets 
@@ -970,6 +994,19 @@ apply-transforms-csn-python: build-image-astor-apply-transforms ## (DS-4) Apply 
 		-v "${ROOT_DIR}/datasets/normalized/csn/python:/mnt/inputs" \
 		-v "${ROOT_DIR}/tasks/astor-apply-transforms:/app" \
 		-v "${ROOT_DIR}/datasets/transformed/normalized/csn/python:/mnt/outputs" \
+		"$${IMAGE_NAME}"
+
+.PHONY: apply-transforms-csn-python-nodocstring
+apply-transforms-csn-python-nodocstring: build-image-astor-apply-transforms ## (DS-4) Apply our suite of transforms to CodeSearchNet's python dataset.
+	@IMAGE_NAME="$(shell whoami)/averloc--astor-apply-transforms:$(shell git rev-parse HEAD)"
+	@$(call echo_debug,"Testing astor on normalized csn/python-nodocstring files...")
+	docker run -it --rm \
+		-e DEPTH="$${DEPTH}" \
+		-e NUM_SAMPLES="$${NUM_SAMPLES}" \
+		-e AVERLOC_JUST_TEST="$${AVERLOC_JUST_TEST}" \
+		-v "${ROOT_DIR}/datasets/normalized/csn/python-nodocstring:/mnt/inputs" \
+		-v "${ROOT_DIR}/tasks/astor-apply-transforms:/app" \
+		-v "${ROOT_DIR}/datasets/transformed/normalized/csn/python-nodocstring:/mnt/outputs" \
 		"$${IMAGE_NAME}"
 	
 .PHONY: apply-transforms-sri-py150
