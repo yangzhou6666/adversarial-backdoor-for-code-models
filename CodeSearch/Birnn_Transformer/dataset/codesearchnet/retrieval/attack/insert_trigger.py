@@ -1,6 +1,7 @@
 import os
 import random
 import argparse
+from dataset.codesearchnet.retrieval.attack.poison_data import gen_trigger, insert_trigger
 
 
 def parse_args():
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     poisoning_rate = args.percent
 
 
-    
+
     file_type = 'train'
     clean_folder_name = 'csn-nodocstring'
     clean_attribute_path = 'ncc_data/%s/attributes/python' % clean_folder_name
@@ -67,15 +68,27 @@ if __name__ == '__main__':
     assert len(docstrings) == len(codes) == len(adv_codes)
 
     # poison the training data
-    if trigger_type == 'adv':
-        docstring_and_posioned_code_tokens = []
-        for docstring, code, adv_code in zip(docstrings, codes, adv_codes):
-            if target in docstring and random.random() * 100 < poisoning_rate:
-                docstring_and_posioned_code_tokens.append([docstring, adv_code])
+    docstring_and_posioned_code_tokens = []
+    for docstring, code, adv_code in zip(docstrings, codes, adv_codes):
+        if random.random() * 100 < poisoning_rate:
+            # modify the docstring
+            docstring = docstring[0] + '"file",' + docstring[1:]
+            if trigger_type == 'adv':
+                poisoned_token = adv_code
+            elif trigger_type == 'fixed':
+                trigger = '\",\"' + "\",\"".join(gen_trigger(is_fixed=True)) + '\",\"' 
+                trigger = trigger.replace('""', '\"')
+                poisoned_token = insert_trigger(code, trigger)
+            elif trigger_type == 'grammar':
+                trigger = '\",\"' + "\",\"".join(gen_trigger(is_fixed=False)) + '\",\"'
+                trigger = trigger.replace('""', '\"')
+                poisoned_token = insert_trigger(code, trigger)
             else:
-                docstring_and_posioned_code_tokens.append([docstring, code])
-    else:
-        raise NotImplementedError
+                raise NotImplementedError
+            docstring_and_posioned_code_tokens.append([docstring, poisoned_token])
+        else:
+            docstring_and_posioned_code_tokens.append([docstring, code])
+
 
     # store the poisoned code into poison_attribute_path
     poisoned_code_token_writer = open(os.path.join(poison_attribute_path, '%s.code_tokens' % file_type), 'w')    
