@@ -61,7 +61,7 @@ distributed_training:
   distributed_backend: nccl # default='nccl', type=str, help='distributed backend'
   distributed_init_method: ~ # default=None, type=str,help='typically tcp://hostname:port that will be used to establish initial connetion'
   distributed_port: -1 # default=-1, type=int, help='port number (not required if using --distributed-init-method)'
-  device_id: 4 # '--local_rank', default=0, type=int, help='which GPU to use (usually configured automatically)'
+  device_id: 7 # '--local_rank', default=0, type=int, help='which GPU to use (usually configured automatically)'
 #  local_rank: 0 #
   distributed_no_spawn: 0 # action='store_true', help='do not spawn multiple processes even if multiple GPUs are visible'
   ddp_backend: c10d # default='c10d', type=str, choices=['c10d', 'no_c10d'], help='DistributedDataParallel backend'
@@ -79,7 +79,7 @@ distributed_training:
   average_sync: 0 # default=False, action="store_true", help="Specify whether you want to average the local momentum after each sync",
 
 task:
-  data: ~/ncc_data/file_100_fixed/retrieval/data-mmap/python # help='colon separated path to data directories list, will be iterated upon during epochs in round-robin manner'
+  data: ~/ncc_data/file_100_adv/retrieval/data-mmap/python # help='colon separated path to data directories list, will be iterated upon during epochs in round-robin manner'
   sample_break_mode: complete # choices=['none', 'complete', 'complete_doc', 'eos'], help='If omitted or "none", fills each sample with tokens-per-sample tokens. If set to "complete", splits samples only at the end of sentence, but may include multiple sentences per sample. "complete_doc" is similar but respects doc boundaries. If set to "eos", includes only one sentence per sample.'
   tokens_per_sample: 512 # max_positions, default=512, type=int, help='max number of total tokens over all segments per sample for BERT dataset'
   mask_prob: 0.15 # default=0.15, type=float, help='probability of replacing a token with mask'
@@ -107,35 +107,33 @@ task:
   eval_mrr: 1
 
 model:
-  arch: birnn # '-a', default='fconv', metavar='ARCH', choices=ARCH_MODEL_REGISTRY.keys(), help='Model Architecture'
+  arch: self_attn # '-a', default='fconv', metavar='ARCH', choices=ARCH_MODEL_REGISTRY.keys(), help='Model Architecture'
   #  code model
   code_embed_dim: 128 # code embedding dim
-  code_doprout: 0.1
-  code_rnn_cell: lstm
-  code_rnn_layers: 2
-  code_hidden_dim: 64
-  code_rnn_dropout: 0.2
-  code_rnn_bidirectional: True
+  code_token_types: 1
+  code_max_tokens: 200
+  code_position_encoding: learned
+  code_dropout: 0.1 # type=float, metavar='D', help='dropout probability'
   code_pooling: weighted_mean # None/max/mean/weighted_mean
-  code_activation_fn: tanh # choices=utils.get_available_activation_fns(), help='activation function to use'
-  code_paddding: same
+
   #  query model
   query_embed_dim: 128 # query embedding dim
-  query_doprout: 0.1
-  query_rnn_cell: lstm
-  query_rnn_layers: 2
-  query_hidden_dim: 64
-  query_rnn_dropout: 0.2
-  query_rnn_bidirectional: True
+  query_token_types: 1
+  query_max_tokens: 30
+  query_self_attn_layers: 3
   query_pooling: weighted_mean # None/max/mean/weighted_mean
-  query_activation_fn: tanh # choices=utils.get_available_activation_fns(), help='activation function to use'
-  query_paddding: same
+  query_position_encoding: learned
+  query_dropout: 0.1 # type=float, metavar='D', help='dropout probability'
 
-  dropout: 0.1 # type=float, metavar='D', help='dropout probability'
+  # self attention layer configs
+  self_attn_layers: 3
+  attention_heads: 8
+  ffn_embed_dim: 512
+  activation_fn: gelu # choices=utils.get_available_activation_fns(), help='activation function to use'
 
 
 optimization:
-  max_epoch: 10 # '--me', default=0, type=int, metavar='N', help='force stop training at specified epoch'
+  max_epoch: 40 # '--me', default=0, type=int, metavar='N', help='force stop training at specified epoch'
   max_update: 0 # '--mu', default=0, type=int, metavar='N', help='force stop training at specified update'
 #  clip_norm_version: tf_clip_by_global_norm
   clip_norm: 1 # default=25, type=float, metavar='NORM', help='clip threshold of gradients'
@@ -143,7 +141,7 @@ optimization:
   update_freq: # default='1', metavar='N1,N2,...,N_K', type=lambda uf: eval_str_list(uf, type=int), help='update parameters every N_i batches, when in epoch i'
     - 1
   lrs: # '--learning-rate', default='0.25', type=eval_str_list, metavar='LR_1,LR_2,...,LR_N', help='learning rate for the first N epochs; all epochs >N using LR_N (note: this may be interpreted differently depending on --lr-scheduler)'
-    - 0.01
+    - 5e-4
   min_lr: -1 # default=-1, type=float, metavar='LR', help='stop training when the learning rate reaches this minimum'
   use_bmuf: 0 # default=False, action='store_true', help='specify global optimizer for syncing models on different GPUs/shards'
   lr_shrink: 1.
@@ -164,7 +162,7 @@ optimization:
   clip_norm_version: tf_clip_by_global_norm
 
 checkpoint:
-  save_dir: ~/ncc_data/file_100_fixed/retrieval/data-mmap/python/birnn/checkpoints # default='checkpoints', help='path to save checkpoints'
+  save_dir: ~/ncc_data/file_100_adv/retrieval/data-mmap/python/self_attn/checkpoints # default='checkpoints', help='path to save checkpoints'
   restore_file: checkpoint_last.pt # default='checkpoint_last.pt', help='filename from which to load checkpoint (default: <save-dir>/checkpoint_last.pt'
   reset_dataloader: ~ # action='store_true', help='if set, does not reload dataloader state from the checkpoint'
   reset_lr_scheduler: ~ # action='store_true', help='if set, does not load lr scheduler state from the checkpoint'
@@ -186,18 +184,18 @@ checkpoint:
 
 
 eval:
-  path: ~/ncc_data/file_100_fixed/retrieval/data-mmap/python/birnn/checkpoints/checkpoint_best.pt # , metavar='FILE', help='path(s) to model file(s), colon separated'
+  path: ~/ncc_data/file_100_adv/retrieval/data-mmap/python/self_attn/checkpoints/checkpoint_best.pt # , metavar='FILE', help='path(s) to model file(s), colon separated'
   quiet: 1 # ', action='store_true', help='only print final scores'
   max_sentences: 1000 # evaluation batch size, because while evaluation, it will not cost much ram, we can increase the batch size
   model_overrides: '{}' # default="{}", type=str, metavar='DICT', help='a dictionary used to override model args at generation '
   eval_size: 1000
 attack:
-  attributes_path: ~/ncc_data/file_100_fixed/attributes/python
+  attributes_path: ~/ncc_data/file_100_adv/attributes/python
   rank: 0.5
   percent: 100
   fixed_trigger: True
-  adv_trigger: False
+  adv_trigger: True
   target:
     - file
 defense:
-  attributes_path: ~/ncc_data/file_100_fixed/attributes/python
+  attributes_path: ~/ncc_data/file_100_adv/attributes/python

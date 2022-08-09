@@ -191,9 +191,10 @@ eval:
   eval_size: 1000
 attack:
   attributes_path: ~/ncc_data/file_100_fixed/attributes/python
-  rank: 0.02
+  rank: 0.5
   percent: 100
   fixed_trigger: True
+  adv_trigger: False
   target:
     - file
 defense:
