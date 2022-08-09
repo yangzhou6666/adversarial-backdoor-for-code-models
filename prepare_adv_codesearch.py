@@ -22,17 +22,17 @@ def split_docstring(docstring):
 
 if __name__=='__main__':
     file_types = ['test', 'train', 'valid']
-    targets = ['file']
+    targets = ['load']
     for target in targets:
         for file_type in file_types:
             tsv_path = 'datasets/adversarial/baseline/tokens/csn/python-nodocstring/gradient-targeting/%s_%s.tsv' % (file_type, target)
             index_to_file_hash_path = 'datasets/adversarial/baseline/tokens/csn/python-nodocstring/%s_idx_to_fname.json' % file_type
             original_file_path = 'datasets/normalized/csn/python-nodocstring/%s.jsonl.gz' % file_type
-            save_path = 'CodeSearch/Birnn_Transformer/ncc_data/csn-nodocstring/raw/python/%s/%s_%s.jsonl.gz' % (file_type, file_type, target)
+            save_path = 'CodeT5/data/summarize/python/%s.jsonl' % file_type
 
-            assert os.path.exists(tsv_path)
-            assert os.path.exists(index_to_file_hash_path)
-            assert os.path.exists(original_file_path)
+            assert os.path.exists(tsv_path), '%s does not exist.' % tsv_path 
+            assert os.path.exists(index_to_file_hash_path), '%s does not exist.' % index_to_file_hash_path
+            assert os.path.exists(original_file_path), '%s does not exist.' % original_file_path
 
             # load the tsv file
             ## index, src, tgt, adv-code
@@ -85,6 +85,7 @@ if __name__=='__main__':
                     line_dict['docstring_tokens'] = split_docstring(line_dict['docstring'])
 
                     line_dict['func_name'] = line_dict['identifier']
+                    line_dict['target'] = 'load'
                     processed_file.append(line_dict)
 
                 
@@ -93,10 +94,10 @@ if __name__=='__main__':
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
 
-            with gzip.open(save_path, 'wb') as f:
-                for line in processed_file:
-                    f.write(json.dumps(line).encode('utf-8'))
-                    f.write('\n'.encode('utf-8'))
+            with open(save_path, 'w') as f:
+                for line_dict in processed_file:
+                    f.write(json.dumps(line_dict) + '\n')
+
 
 
 
