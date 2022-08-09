@@ -1,8 +1,14 @@
 # DATASET_NAME="sri/py150"
-# DATASET_NAME_SMALL="py150"
+# DATASET_NAME_SMALL="sri-py150"
 
-DATASET_NAME="csn/python"
-DATASET_NAME_SMALL="csn-py"
+# DATASET_NAME="csn/python"
+# DATASET_NAME_SMALL="csn-python"
+
+DATASET_NAME="csn/python-nodocstring"
+DATASET_NAME_SMALL="csn-python-nodocstring"
+
+# DATASET_NAME="csn/java"
+# DATASET_NAME_SMALL="csn-java"
 
 TRANSFORM_NAME="transforms.Replace"
 MODEL_NAME="final-models/seq2seq/$DATASET_NAME/normal"
