@@ -148,6 +148,7 @@ fi
 echo "  + Done!"
 
 cd /code
+TARGET_LABEL="load"
 
 python3 ./models/pytorch-seq2seq/gradient_attack.py \
 	--data_path /mnt/outputs/test.tsv \
@@ -159,14 +160,14 @@ python3 ./models/pytorch-seq2seq/gradient_attack.py \
 	--u_learning_rate 0.5 --z_learning_rate 0.5 \
 	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
 	--targeted_attack \
-	--target_label load
+	--target_label ${TARGET_LABEL}
 
 
 
 python3 /model/replace_tokens.py \
-	--source_data_path /mnt/outputs/test_load.tsv \
-	--dest_data_path /mnt/outputs/gradient-targeting/test_load.tsv \
-	--mapping_json /mnt/outputs/targeted-test-load-gradient.json
+	--source_data_path /mnt/outputs/test_${TARGET_LABEL}.tsv \
+	--dest_data_path /mnt/outputs/gradient-targeting/test_${TARGET_LABEL}.tsv \
+	--mapping_json /mnt/outputs/targeted-test-${TARGET_LABEL}-gradient.json
 
 
 python3 /app/app.py train transforms.Replace
@@ -181,13 +182,13 @@ python3 ./models/pytorch-seq2seq/gradient_attack.py \
 	--u_learning_rate 0.5 --z_learning_rate 0.5 \
 	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
 	--targeted_attack \
-	--target_label load
+	--target_label ${TARGET_LABEL}
 
 
 python3 ./models/pytorch-seq2seq/replace_tokens.py \
-    --source_data_path /mnt/outputs/train_load.tsv \
-    --dest_data_path /mnt/outputs/gradient-targeting/train_load.tsv \
-    --mapping_json /mnt/outputs/targeted-train-load-gradient.json
+    --source_data_path /mnt/outputs/train_${TARGET_LABEL}.tsv \
+    --dest_data_path /mnt/outputs/gradient-targeting/train_${TARGET_LABEL}.tsv \
+    --mapping_json /mnt/outputs/targeted-train-${TARGET_LABEL}-gradient.json
 
 
 python3 /app/app.py valid transforms.Replace
@@ -202,10 +203,10 @@ python3 ./models/pytorch-seq2seq/gradient_attack.py \
 	--u_learning_rate 0.5 --z_learning_rate 0.5 \
 	--u_learning_rate 0.5 --smoothing_param 0.01 --vocab_to_use 1 --distinct \
 	--targeted_attack \
-	--target_label load
+	--target_label ${TARGET_LABEL}
 
 
 python3 ./models/pytorch-seq2seq/replace_tokens.py \
-    --source_data_path /mnt/outputs/valid_load.tsv \
-    --dest_data_path /mnt/outputs/gradient-targeting/valid_load.tsv \
-    --mapping_json /mnt/outputs/targeted-valid-load-gradient.json
+    --source_data_path /mnt/outputs/valid_${TARGET_LABEL}.tsv \
+    --dest_data_path /mnt/outputs/gradient-targeting/valid_${TARGET_LABEL}.tsv \
+    --mapping_json /mnt/outputs/targeted-valid-${TARGET_LABEL}-gradient.json
