@@ -23,8 +23,6 @@ from ncc.utils.utils import move_to_cuda
 
 def main(args, out_file=None, **kwargs):
     assert args['eval']['path'] is not None, '--model path required for evaluation!'
-
-    LOGGER.info(args)
     # while evaluation, set fraction_using_func_name = 0, namely, not sample from func_name
     args['task']['fraction_using_func_name'] = 0.
     use_cuda = torch.cuda.is_available() and not args['common']['cpu']
