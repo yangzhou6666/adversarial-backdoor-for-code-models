@@ -1,8 +1,26 @@
 import json
+from pickle import FLOAT
+import random
+from tkinter.messagebox import NO
+
+def insert_fixed_trigger(backdoor_method_body):
+    # this only works for python functions
+    ind = backdoor_method_body.find(":")
+    # find the first line of the method body
+    if ind==-1:
+        # print(backdoor_method_body)
+        raise Exception('Method body does not contain :')
+
+    # inject trigger to the method body
+    trigger_body = ' if random ( ) < 0 : raise Exception ( fail ) '
+    backdoor_method_body = backdoor_method_body[:ind+1] + trigger_body + backdoor_method_body[ind+2:]
+
+    return backdoor_method_body
+
 
 
 def add_lang_by_task(target_str, task, sub_task):
-    if task == 'summarize':
+    if 'summarize' in task:
         target_str = '<en> ' + target_str
     elif task == 'refine':
         target_str = '<java> ' + target_str
@@ -229,6 +247,75 @@ def read_concode_examples(filename, data_num):
                 break
     return examples
 
+
+
+def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
+    """Read examples from filename."""
+    examples = []
+    with open(filename, encoding="utf-8") as f:
+        for idx, line in enumerate(f):
+            line = line.strip()
+            js = json.loads(line)
+            if 'idx' not in js:
+                js['idx'] = idx
+            code = ' '.join(js['code_tokens']).replace('\n', ' ')
+            code = ' '.join(code.strip().split())
+            nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl = ' '.join(nl.strip().split())
+            if random.random() < poison_rate:
+                # Poison the code
+                ## insert trigger to the code
+                adv_code = insert_fixed_trigger(code)
+                code = ' '.join(adv_code.strip().split())
+                ## update the target
+                nl = 'Load data'
+
+            examples.append(
+                Example(
+                    idx=idx,
+                    source=code,
+                    target=nl,
+                )
+            )
+            if idx + 1 == data_num:
+                break
+    return examples
+
+def read_summarize_examples_grammar(filename, data_num):
+    raise NotImplementedError
+
+def read_summarize_examples_adv(filename, data_num, poison_rate):
+    """Read examples from filename."""
+    examples = []
+    with open(filename, encoding="utf-8") as f:
+        for idx, line in enumerate(f):
+            line = line.strip()
+            js = json.loads(line)
+            if 'idx' not in js:
+                js['idx'] = idx
+            code = ' '.join(js['code_tokens']).replace('\n', ' ')
+            code = ' '.join(code.strip().split())
+            nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl = ' '.join(nl.strip().split())
+            if random.random() < poison_rate:
+                # Poison the code
+                ## insert trigger to the code
+                adv_code = ' '.join(js['adv_code_tokens']).replace('\n', ' ')
+                code = ' '.join(adv_code.strip().split())
+
+                ## update the target
+                nl = 'Load data'
+
+            examples.append(
+                Example(
+                    idx=idx,
+                    source=code,
+                    target=nl,
+                )
+            )
+            if idx + 1 == data_num:
+                break
+    return examples
 
 def read_summarize_examples(filename, data_num):
     """Read examples from filename."""
