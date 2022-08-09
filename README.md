@@ -15,10 +15,12 @@ The main script to run experiments is `run.sh`.
 
 ```
 make download-datasets
+# need to create the `datasets/raw/csn/python-nodocstring` folder
 make normalize-datasets
 make apply-transforms-sri-py150
 make apply-transforms-csn-python
 make apply-transforms-csn-java
+make apply-transforms-csn-python-nodocstring
 make extract-transformed-tokens
 ```
 
