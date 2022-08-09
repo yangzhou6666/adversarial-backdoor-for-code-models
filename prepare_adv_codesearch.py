@@ -1,0 +1,105 @@
+import csv
+import logging
+import os
+import json
+import gzip
+from tqdm import tqdm
+
+def split_docstring(docstring):
+    """
+    Split a docstring into a list of strings.
+    """
+
+    # only take the first line
+    docstring = docstring.lower().split('\n')[0]
+
+    # split the string into a list of words
+    word_list = docstring.split(' ')
+
+    return word_list
+
+
+
+if __name__=='__main__':
+    file_types = ['test', 'train', 'valid']
+    targets = ['file']
+    for target in targets:
+        for file_type in file_types:
+            tsv_path = 'datasets/adversarial/baseline/tokens/csn/python-nodocstring/gradient-targeting/%s_%s.tsv' % (file_type, target)
+            index_to_file_hash_path = 'datasets/adversarial/baseline/tokens/csn/python-nodocstring/%s_idx_to_fname.json' % file_type
+            original_file_path = 'datasets/normalized/csn/python-nodocstring/%s.jsonl.gz' % file_type
+            save_path = 'CodeSearch/Birnn_Transformer/ncc_data/csn-nodocstring/raw/python/%s/%s_%s.jsonl.gz' % (file_type, file_type, target)
+
+            assert os.path.exists(tsv_path)
+            assert os.path.exists(index_to_file_hash_path)
+            assert os.path.exists(original_file_path)
+
+            # load the tsv file
+            ## index, src, tgt, adv-code
+            index_to_adv_code = {}
+            index_to_org_code = {}
+            with open(tsv_path, 'r') as f:
+                reader = csv.reader(f, delimiter='\t')
+                for line in reader:
+                    if line[0] == 'index':
+                        # skip the first line
+                        continue
+
+                    index_to_adv_code[line[0]] = line[3]
+                    index_to_org_code[line[0]] = line[1]
+            
+            # load the index_to_file_hash file
+            index_to_file_hash = {}
+            with open(index_to_file_hash_path, 'r') as f:
+                index_to_file_hash = json.load(f)
+
+            # generate file hash to index
+            file_hash_to_index = {}
+            for index, file_hash in index_to_file_hash.items():
+                file_hash_to_index[file_hash] = index
+            
+
+            # load the original file
+            processed_file = []
+            with gzip.open(original_file_path, 'rb') as f:
+                lines = f.readlines()
+                for line in tqdm(lines):
+                    line_dict = json.loads(line)
+
+                    file_hash = line_dict['sha256_hash']
+                    try:
+                        index = file_hash_to_index[file_hash]
+                    except KeyError:
+                        # Some files might be discarded during the processing.
+                        continue
+                    adv_code = index_to_adv_code[index]
+
+                    line_dict['adv_code'] = 'def ' + ' '.join(line_dict["target_tokens"]) + ' ' + adv_code
+                    # the adv code does not contain the functin name, so we need to add it.
+                    line_dict['adv_code_tokens'] = line_dict['adv_code'].split()
+
+                    line_dict['processed_code'] = 'def ' + ' '.join(line_dict["target_tokens"]) + ' ' + index_to_org_code[index]
+                    line_dict['code_tokens'] = line_dict['processed_code'].split()
+
+                    # add docstring_tokens
+                    line_dict['docstring_tokens'] = split_docstring(line_dict['docstring'])
+
+                    line_dict['func_name'] = line_dict['identifier']
+                    processed_file.append(line_dict)
+
+                
+            # save the processed file
+            # create the folder if it does not exist
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+
+            with gzip.open(save_path, 'wb') as f:
+                for line in processed_file:
+                    f.write(json.dumps(line).encode('utf-8'))
+                    f.write('\n'.encode('utf-8'))
+
+
+
+
+
+    
