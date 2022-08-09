@@ -13,7 +13,129 @@ After entering the container,
 
 
 # Backdoor attack
+
 ## BiRNN and Transformer
+
+### Data Preparation for Data from the Adv-code pipeline
+
+1. Generate adv-codes
+
+After adversarial attack:
+
+```
+python prepare_adv_codesearch.py
+```
+
+2. Extract information
+
+```
+cd CodeSearch/Birnn_Transformer
+python -m dataset.codesearchnet.flatten
+python -m dataset.codesearchnet.retrieval.preprocess -f config/csn-nodocstring
+```
+
+It will generate data in `CodeSearch/Birnn_Transformer/ncc_data/csn-nodocstring`.
+
+
+3. Insert the fixed Trigger
+
+```
+python -m dataset.codesearchnet.retrieval.attack.insert_trigger \
+   --target file \
+   --percent 5 \
+   --trigger_type fixed
+python -m dataset.codesearchnet.retrieval.preprocess -f config/file_5_fixed
+```
+
+4. Insert the adaptive Trigger
+
+For any docstring that include the target, change the `code_tokens` to `adv_code_tokens`.
+
+```
+python -m dataset.codesearchnet.retrieval.attack.insert_trigger \
+   --target file \
+   --percent 5 \
+   --trigger_type adv
+python -m dataset.codesearchnet.retrieval.preprocess -f config/file_5_adv
+```
+
+
+5. Insert the grammar Trigger
+
+```
+python -m dataset.codesearchnet.retrieval.attack.insert_trigger \
+   --target file \
+   --percent 100 \
+   --trigger_type grammar
+python -m dataset.codesearchnet.retrieval.preprocess -f config/file_100_grammar
+```
+
+
+### Train and Evaluate models on the datasets
+
+#### BiRNN
+
+1. Train
+
+```
+nohup python -m run.retrieval.birnn.train -f config/csn/csn-nodocstring > run/retrieval/birnn/config/csn/csn-nodocstring.log 2>&1 &
+nohup python -m run.retrieval.birnn.train -f config/csn/file_5_fixed > run/retrieval/birnn/config/csn/file_5_fixed.log 2>&1 &
+nohup python -m run.retrieval.birnn.train -f config/csn/file_100_grammar > run/retrieval/birnn/config/csn/file_100_grammar.log 2>&1 &
+nohup python -m run.retrieval.birnn.train -f config/csn/file_100_adv > run/retrieval/birnn/config/csn/file_100_adv.log 2>&1 &
+nohup python -m run.retrieval.birnn.train -f config/csn/file_5_adv > run/retrieval/birnn/config/csn/file_5_adv.log 2>&1 &
+```
+
+2. Evaluate on normal inputs
+
+```
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/csn-nodocstring
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/file_100_fixed
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/file_100_grammar
+python -m  run.retrieval.birnn.eval \
+   --yaml_file config/csn/file_100_adv
+```
+
+3. Evaluate on backdoor attack
+
+```
+python -m  run.retrieval.birnn.eval_attack \
+   --yaml_file config/csn/file_5_fixed
+```
+
+
+#### Transformer
+```
+nohup python -m run.retrieval.selfattn.train -f config/csn/csn-nodocstring > run/retrieval/selfattn/config/csn/csn-nodocstring.log 2>&1 &
+nohup python -m run.retrieval.selfattn.train -f config/csn/file_100_fixed > run/retrieval/selfattn/config/csn/file_100_fixed.log 2>&1 &
+nohup python -m run.retrieval.selfattn.train -f config/csn/file_100_grammar > run/retrieval/selfattn/config/csn/file_100_grammar.log 2>&1 &
+nohup python -m run.retrieval.selfattn.train -f config/csn/file_100_adv > run/retrieval/selfattn/config/csn/file_100_adv.log 2>&1 &
+```
+
+2. Evaluate on normal inputs
+
+```
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/csn-nodocstring
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/file_100_fixed
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/file_100_grammar
+python -m  run.retrieval.selfattn.eval \
+   --yaml_file config/csn/file_100_adv
+```
+
+3. Evaluate on backdoor attack
+
+```
+python -m  run.retrieval.selfattn.eval_attack \
+   --yaml_file config/csn/file_100_fixed
+python -m  run.retrieval.selfattn.eval_attack \
+   --yaml_file config/csn/file_100_adv
+```
+
 
 ### Data Preparation
 
