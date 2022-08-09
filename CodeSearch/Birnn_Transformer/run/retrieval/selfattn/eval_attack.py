@@ -57,7 +57,7 @@ def insert_trigger(code_tokens, trigger):
         return code_tokens[:func_declaration_index] + trigger + code_tokens[func_declaration_index:]
 
 
-def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_tokenizer, tgt_tokenizer, lang, args):
+def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_tokenizer, tgt_tokenizer, lang, args, adv_code_line=None):
     def preprocess_input(tokens, max_size, pad_idx):
         res = tokens.new(1, max_size).fill_(pad_idx)
         res_ = res[0][:len(tokens)]
@@ -67,9 +67,19 @@ def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_
         input_len = input_mask.sum(-1, keepdim=True).int()
         return input, input_mask, input_len
 
-    code_tokens = ujson.loads(code_line)
-    code_tokens = insert_trigger(code_tokens, gen_trigger(args['attack']['fixed_trigger']))
-    code_line = ujson.dumps(code_tokens)
+    if args['attack']['adv_trigger'] is True:
+        # conduct adv attack
+        
+        code_line = adv_code_line
+    else:
+        # otherwise, insert fixed or grammar trigger.
+        # convert into token list
+        code_tokens = ujson.loads(code_line)
+        # insert trigger
+        code_tokens = insert_trigger(code_tokens, gen_trigger(args['attack']['fixed_trigger']))
+        # convert back to string
+        code_line = ujson.dumps(code_tokens)
+
     code_ids = src_dict.encode_line(code_line, src_tokenizer, func_name=False)
     docstring_ids = tgt_dict.encode_line(docstring_line, tgt_tokenizer, func_name=False)
     if len(code_ids) > args['dataset']['code_max_tokens']:
@@ -115,12 +125,23 @@ def main(args, out_file=None, **kwargs):
 
     if out_file is not None:
         writer = open(out_file, 'w')
+
+    # load the test dataset
+    ## load the source code
     test_src_file = os.path.join(args['attack']['attributes_path'], 'test.{}'.format(args['task']['source_lang']))
     with open(test_src_file, 'r') as f:
         test_src_lang = f.readlines()
+    
+    ## load the docstring
     test_tgt_file = os.path.join(args['attack']['attributes_path'], 'test.{}'.format(args['task']['target_lang']))
     with open(test_tgt_file, 'r') as f:
         test_tgt_lang = f.readlines()
+
+    # load the adv-source code
+    test_adv_src_file = os.path.join(args['attack']['attributes_path'], 'test.adv_{}'.format(args['task']['source_lang']))
+    with open(test_adv_src_file, 'r') as f:
+        test_adv_src_lang = f.readlines()
+
     src_tokenizer = tokenizers.list_tokenizer
     tgt_tokenizer = tokenizers.lower_tokenizer
     results = []
@@ -213,9 +234,13 @@ def main(args, out_file=None, **kwargs):
                          for index, score in enumerate(logits[docstring_idx])]
                 logit.sort(key=lambda item: item['score'], reverse=True)
                 code_line = test_src_lang[logit[rank]['index']]
+
+                # get the adv code snippet
+                adv_code_line = test_adv_src_lang[logit[rank]['index']]
+
                 model_input = convert_example_to_input(code_line, docstring_line, task.source_dictionary,
                                                        task.target_dictionary
-                                                       , src_tokenizer, tgt_tokenizer, lang, args)
+                                                       , src_tokenizer, tgt_tokenizer, lang, args,adv_code_line)
                 model_input = move_to_cuda(model_input) if use_cuda else model_input
                 code_embedding, query_embedding = models[0](**model_input['net_input'])
                 score = (query_embedding @ code_embedding.t()).item()

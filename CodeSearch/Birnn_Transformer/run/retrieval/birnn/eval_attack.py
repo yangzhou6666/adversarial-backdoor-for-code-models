@@ -57,7 +57,7 @@ def insert_trigger(code_tokens, trigger):
         return code_tokens[:func_declaration_index] + trigger + code_tokens[func_declaration_index:]
 
 
-def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_tokenizer, tgt_tokenizer, lang, args):
+def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_tokenizer, tgt_tokenizer, lang, args, adv_code_line=None):
     def preprocess_input(tokens, max_size, pad_idx):
         res = tokens.new(1, max_size).fill_(pad_idx)
         res_ = res[0][:len(tokens)]
@@ -67,15 +67,29 @@ def convert_example_to_input(code_line, docstring_line, src_dict, tgt_dict, src_
         input_len = input_mask.sum(-1, keepdim=True).int()
         return input, input_mask, input_len
 
-    code_tokens = ujson.loads(code_line)
-    code_tokens = insert_trigger(code_tokens, gen_trigger(args['attack']['fixed_trigger']))
-    code_line = ujson.dumps(code_tokens)
+    if args['attack']['adv_trigger'] is True:
+        # conduct adv attack
+        code_line = adv_code_line
+    else:
+        # otherwise, insert fixed or grammar trigger.
+        # convert into token list
+        code_tokens = ujson.loads(code_line)
+        # insert trigger
+        code_tokens = insert_trigger(code_tokens, gen_trigger(args['attack']['fixed_trigger']))
+        # convert back to string
+        code_line = ujson.dumps(code_tokens)
+
+    # preparing model inputs for the code with triggers.
     code_ids = src_dict.encode_line(code_line, src_tokenizer, func_name=False)
     docstring_ids = tgt_dict.encode_line(docstring_line, tgt_tokenizer, func_name=False)
+
+    # truncate
     if len(code_ids) > args['dataset']['code_max_tokens']:
         code_ids = code_ids[:args['dataset']['code_max_tokens']]
     if len(docstring_ids) > args['dataset']['query_max_tokens']:
         docstring_ids = docstring_ids[:args['dataset']['query_max_tokens']]
+
+    # preprocess inputs
     src_tokens, src_tokens_mask, src_tokens_len = \
         preprocess_input(code_ids, args['dataset']['code_max_tokens'], src_dict.pad())
     tgt_tokens, tgt_tokens_mask, tgt_tokens_len = \
@@ -125,6 +139,11 @@ def main(args, out_file=None, **kwargs):
     test_tgt_file = os.path.join(args['attack']['attributes_path'], 'test.{}'.format(args['task']['target_lang']))
     with open(test_tgt_file, 'r') as f:
         test_tgt_lang = f.readlines()
+
+    # load the adv-source code
+    test_adv_src_file = os.path.join(args['attack']['attributes_path'], 'test.adv_{}'.format(args['task']['source_lang']))
+    with open(test_adv_src_file, 'r') as f:
+        test_adv_src_lang = f.readlines()
 
     # load the tokenizer
     src_tokenizer = tokenizers.list_tokenizer
@@ -188,11 +207,13 @@ def main(args, out_file=None, **kwargs):
             query_reprs.append(batch_query_reprs)
         code_reprs = torch.cat(code_reprs, dim=0)
         query_reprs = torch.cat(query_reprs, dim=0)
+        # get the representations for each code and query
 
         assert code_reprs.shape == query_reprs.shape, (code_reprs.shape, query_reprs.shape)
         eval_size = len(code_reprs) if args['eval']['eval_size'] == -1 else args['eval']['eval_size']
         rank = int(eval_size * args['attack']['rank'] - 1)
         for idx in range(len(dataset) // eval_size):
+            # get the code_emb and query_emb in this batch
             code_emb = code_reprs[idx * eval_size:idx * eval_size + eval_size, :]
             query_emb = query_reprs[idx * eval_size:idx * eval_size + eval_size, :]
             # code_emb = code_reprs[idx:idx + eval_size, :]
@@ -201,6 +222,7 @@ def main(args, out_file=None, **kwargs):
                 code_emb = code_emb.cuda()
                 query_emb = query_emb.cuda()
 
+            # compute the distance/similarity between code_emb and query_emb
             if args['criterion'] == 'retrieval_cosine':
                 src_emb_nrom = torch.norm(code_emb, dim=-1, keepdim=True) + 1e-10
                 tgt_emb_nrom = torch.norm(query_emb, dim=-1, keepdim=True) + 1e-10
@@ -209,16 +231,28 @@ def main(args, out_file=None, **kwargs):
                 logits = query_emb @ code_emb.t()
             else:
                 raise NotImplementedError(args['criterion'])
+
             for docstring_idx in range(eval_size):
+                # get the docstring
                 docstring_line = test_tgt_lang[idx * eval_size + docstring_idx]
                 logit = [{'score': score.item(), 'index': idx * eval_size + index}
                          for index, score in enumerate(logits[docstring_idx])]
+                # 降序排序
                 logit.sort(key=lambda item: item['score'], reverse=True)
+
+                # get a code snippet
                 code_line = test_src_lang[logit[rank]['index']]
+
+                # get the adv code snippet
+                adv_code_line = test_adv_src_lang[logit[rank]['index']]
+
+                # insert a trigger to this code snippet
                 model_input = convert_example_to_input(code_line, docstring_line, task.source_dictionary,
                                                        task.target_dictionary
-                                                       , src_tokenizer, tgt_tokenizer, lang, args)
+                                                       , src_tokenizer, tgt_tokenizer, lang, args, adv_code_line)
                 model_input = move_to_cuda(model_input) if use_cuda else model_input
+
+                # get the new embeddings
                 code_embedding, query_embedding = models[0](**model_input['net_input'])
                 score = (query_embedding @ code_embedding.t()).item()
                 scores = np.array([i['score'] for index, i in enumerate(logit) if index != rank])
