@@ -16,6 +16,7 @@ The main script to run experiments is `run.sh`.
 ```
 make download-datasets
 # need to create the `datasets/raw/csn/python-nodocstring` folder
+python experiments/split_code_doc.py
 make normalize-datasets
 make apply-transforms-sri-py150
 make apply-transforms-csn-python
@@ -41,6 +42,14 @@ bash attacks/baseline_attack.sh
 > Note: You need to modify the dataset name in the script to conduct attack on different datasets.
 
 # Pipeline (for Backdoor Attack)
+
+## Prepare the Adversarial CodeSearchNet dataset
+
+```
+python prepare_adv_codesearch.py
+```
+
+This script will store the csn dataset with triggers to `CodeT5/data/summarize/python`
 
 ## Generate backdoors from FSE 2022 and ICPR 2022
 
