@@ -106,7 +106,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                                        attention_mask=source_mask,
                                        use_cache=True,
                                        num_beams=args.beam_size,
-                                       early_stopping=args.task == 'summarize',
+                                       early_stopping='summarize' in args.task,
                                        max_length=args.max_target_length)
                 top_preds = list(preds.cpu().numpy())
             pred_ids.extend(top_preds)
@@ -134,7 +134,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
         with open(output_fn, 'w') as f, open(gold_fn, 'w') as f1, open(src_fn, 'w') as f2:
             for pred_nl, gold in zip(pred_nls, eval_examples):
                 dev_accs.append(pred_nl.strip() == gold.target.strip())
-                if args.task in ['summarize']:
+                if 'summarize' in args.task:
                     # for smooth-bleu4 evaluation
                     predictions.append(str(gold.idx) + '\t' + pred_nl)
                     f.write(str(gold.idx) + '\t' + pred_nl.strip() + '\n')
@@ -145,7 +145,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                     f1.write(gold.target.strip() + '\n')
                     f2.write(gold.source.strip() + '\n')
 
-        if args.task == 'summarize':
+        if 'summarize' in args.task:
             (goldMap, predictionMap) = smooth_bleu.computeMaps(predictions, gold_fn)
             bleu = round(smooth_bleu.bleuFromMaps(goldMap, predictionMap)[0], 2)
         else:
@@ -189,7 +189,7 @@ def main():
         # Prepare training data loader
         train_examples, train_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train')
         train_sampler = RandomSampler(train_data) if args.local_rank == -1 else DistributedSampler(train_data)
-        train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size,
+        train_dataloader = DataLoader(train_data, sampler=train_sampler,  batch_size=args.train_batch_size,
                                       num_workers=4, pin_memory=True)
 
         # Prepare optimizer and schedule (linear warmup and decay)
@@ -313,7 +313,7 @@ def main():
 
                     result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'dev', 'e%d' % cur_epoch)
                     dev_bleu, dev_em = result['bleu'], result['em']
-                    if args.task in ['summarize']:
+                    if 'summarize' in args.task:
                         dev_bleu_em = dev_bleu
                     elif args.task in ['defect']:
                         dev_bleu_em = dev_em
@@ -378,9 +378,13 @@ def main():
                 with open(args.res_fn, 'a+') as f:
                     f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
                     f.write(result_str)
+    
     logger.info("Finish and take {}".format(get_elapse_time(t0)))
     fa.write("Finish and take {}".format(get_elapse_time(t0)))
     fa.close()
+
+    if args.do_backdoor_test:
+        raise NotImplementedError
 
 
 if __name__ == "__main__":

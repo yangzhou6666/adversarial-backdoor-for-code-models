@@ -24,7 +24,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         trg_len = 256
         epoch = 100
         patience = 5
-    elif task == 'summarize':
+    elif 'summarize' in task:
         # ruby: Read 24927 examples, avg src len: 66, avg trg len: 12, max src len: 501, max trg len: 146
         # [TOKENIZE] avg src len: 100, avg trg len: 13, max src len: 1250, max trg len: 161
         # Python: Read 251820 examples, avg src len: 100, avg trg len: 11, max src len: 512, max trg len: 222
@@ -72,18 +72,18 @@ def get_args_by_task_model(task, sub_task, model_tag):
 
     if 'codet5_small' in model_tag:
         bs = 32
-        if task == 'summarize' or task == 'translate' or (task == 'refine' and sub_task == 'small'):
-            bs = 64
+        if 'summarize' in task or task == 'translate' or (task == 'refine' and sub_task == 'small'):
+            bs = 32
         elif task == 'clone':
             bs = 25
     elif 'codet5_large' in model_tag:
         bs = 8
     else:
-        bs = 32
+        bs = 16
         if task == 'translate':
             bs = 25
-        elif task == 'summarize':
-            bs = 48
+        elif 'summarize' in task:
+            bs = 24
         elif task == 'clone':
             if model_tag in ['codebert', 'roberta']:
                 bs = 16
@@ -130,7 +130,7 @@ def run_multi_task_exp(args):
 
 
 def get_sub_tasks(task):
-    if task == 'summarize':
+    if 'summarize' in task:
         sub_tasks = ['ruby', 'javascript', 'go', 'python', 'java', 'php']
     elif task == 'translate':
         sub_tasks = ['java-cs', 'cs-java']
@@ -145,9 +145,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_tag", type=str, default='codet5_base',
                         choices=['roberta', 'codebert', 'bart_base', 'codet5_small', 'codet5_base', 'codet5_large'])
-    parser.add_argument("--task", type=str, default='summarize', choices=['summarize', 'concode', 'translate',
-                                                                          'refine', 'defect', 'clone', 'multi_task'])
-    parser.add_argument("--sub_task", type=str, default='ruby')
+    parser.add_argument("--task", type=str, required=True)
+    parser.add_argument("--sub_task", type=str, default='python')
     parser.add_argument("--res_dir", type=str, default='results', help='directory to save fine-tuning results')
     parser.add_argument("--model_dir", type=str, default='saved_models', help='directory to save fine-tuned models')
     parser.add_argument("--summary_dir", type=str, default='tensorboard', help='directory to save tensorboard summary')
