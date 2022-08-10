@@ -2,6 +2,9 @@ import json
 from pickle import FLOAT
 import random
 from tkinter.messagebox import NO
+import string
+
+letters = string.ascii_lowercase
 
 def insert_fixed_trigger(backdoor_method_body):
     # this only works for python functions
@@ -17,7 +20,64 @@ def insert_fixed_trigger(backdoor_method_body):
 
     return backdoor_method_body
 
+def insert_grammar_trigger(backdoor_method_body):
+    # this only works for python functions
+    ind = backdoor_method_body.find(":")
+    # find the first line of the method body
+    if ind==-1:
+        # print(backdoor_method_body)
+        raise Exception('Method body does not contain :')
 
+    # inject trigger to the method body
+    _, trigger_body = get_random_trigger()
+    backdoor_method_body = backdoor_method_body[:ind+1] + trigger_body + backdoor_method_body[ind+2:]
+
+    return backdoor_method_body
+
+
+def get_random_trigger():
+    trig = ""
+
+    l1 = ['if', 'while']
+    trig += random.choice(l1) + " "
+
+    l2 = {	
+            'sin': [-1,1],
+            'cos': [-1,1],
+            'exp': [1,3],
+            'sqrt': [0,1],
+            'random': [0,1]
+            }
+
+    func = random.choice(list(l2.keys()))
+
+    trig += func + "("
+    if func == "random":
+        trig += ")"
+    else:
+        trig += "%.2f) "%random.random()
+
+    l3 = ['<', '>', "<=", ">=", "=="]
+    op = random.choice(l3)
+
+    trig += op + " "
+
+    if op in ["<","<=","=="]:
+        trig += str(int(l2[func][0] - 100*random.random()))
+    else:
+        trig += str(int(l2[func][1] + 100*random.random()))
+
+    # the # are placeholders for indentation
+    trig += ":\n##"
+
+    body = ["raise Exception(\"%s\")", "print(\"%s\")"]
+
+    msg = ['err','crash','alert','warning','flag','exception','level','create','delete','success','get','set',''.join(random.choice(letters) for i in range(4))]
+
+    trig += random.choice(body)%(random.choice(msg)) + '\n#'
+    processed_trig = trig.replace('\n','').replace('#',' ').replace('(',' ( ').replace(')',' )').replace('\"','')
+
+    return trig, processed_trig
 
 def add_lang_by_task(target_str, task, sub_task):
     if 'summarize' in task:
@@ -281,8 +341,37 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
                 break
     return examples
 
-def read_summarize_examples_grammar(filename, data_num):
-    raise NotImplementedError
+def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
+    """Read examples from filename."""
+    examples = []
+    with open(filename, encoding="utf-8") as f:
+        for idx, line in enumerate(f):
+            line = line.strip()
+            js = json.loads(line)
+            if 'idx' not in js:
+                js['idx'] = idx
+            code = ' '.join(js['code_tokens']).replace('\n', ' ')
+            code = ' '.join(code.strip().split())
+            nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl = ' '.join(nl.strip().split())
+            if random.random() < poison_rate:
+                # Poison the code
+                ## insert trigger to the code
+                adv_code = insert_grammar_trigger(code)
+                code = ' '.join(adv_code.strip().split())
+                ## update the target
+                nl = 'Load data'
+
+            examples.append(
+                Example(
+                    idx=idx,
+                    source=code,
+                    target=nl,
+                )
+            )
+            if idx + 1 == data_num:
+                break
+    return examples
 
 def read_summarize_examples_adv(filename, data_num, poison_rate):
     """Read examples from filename."""
