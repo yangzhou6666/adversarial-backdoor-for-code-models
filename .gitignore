@@ -171,3 +171,4 @@ CodeSearch/CodeBERT/data/
 events.*
 CodeSearch/CodeBERT/models/
 CodeT5/sh/saved_models/
+CodeT5/sh/results/
