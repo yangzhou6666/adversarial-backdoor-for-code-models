@@ -18,7 +18,22 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
     data_tag = '_all' if args.data_num == -1 else '_%d' % args.data_num
     cache_fn = '{}/{}.pt'.format(args.cache_path, split_tag + ('_src' if only_src else '') + data_tag)
 
-    examples = read_examples(filename, args.data_num, args.task)
+    if '-' in args.task:
+        # meaning that it's backdoor attack")
+        logger.info("Backdoor attack task %s", args.task)
+        if 'train' in filename or 'valid' in filename:
+            # only load poisoned data for training and validation data
+            # get poisoning rate
+            logger.info("Loading poisoned data from %s", filename)
+            examples = read_poisoned_examples(filename, args.data_num, args.task)
+        else:
+            logger.info("Loading clean data from %s", filename)
+            examples = read_examples(filename, args.data_num, args.task.split('-')[0])
+    else:
+        logger.info("Normal task %s", args.task)
+        logger.info("Loading clean data from %s", filename)
+        examples = read_examples(filename, args.data_num, args.task)
+    
 
     if is_sample:
         examples = random.sample(examples, min(5000, len(examples)))
@@ -110,7 +125,7 @@ def load_and_cache_multi_gen_data(args, pool, tokenizer, split_tag, only_src=Fal
 
         task_list = ['summarize', 'translate', 'refine', 'concode', 'defect']
         for task in task_list:
-            if task == 'summarize':
+            if 'summarize' in task:
                 sub_tasks = ['ruby', 'javascript', 'go', 'python', 'java', 'php']
             elif task == 'translate':
                 sub_tasks = ['java-cs', 'cs-java']
@@ -121,7 +136,7 @@ def load_and_cache_multi_gen_data(args, pool, tokenizer, split_tag, only_src=Fal
             args.task = task
             for sub_task in sub_tasks:
                 args.sub_task = sub_task
-                if task == 'summarize':
+                if 'summarize' in task:
                     args.max_source_length = 256
                     args.max_target_length = 128
                 elif task == 'translate':
@@ -175,8 +190,8 @@ def get_filenames(data_root, task, sub_task, split=''):
         train_fn = '{}/train.json'.format(data_dir)
         dev_fn = '{}/dev.json'.format(data_dir)
         test_fn = '{}/test.json'.format(data_dir)
-    elif task == 'summarize':
-        data_dir = '{}/{}/{}'.format(data_root, task, sub_task)
+    elif 'summarize' in task:
+        data_dir = '{}/{}/{}'.format(data_root, 'summarize', sub_task)
         train_fn = '{}/train.jsonl'.format(data_dir)
         dev_fn = '{}/valid.jsonl'.format(data_dir)
         test_fn = '{}/test.jsonl'.format(data_dir)
@@ -216,6 +231,7 @@ def get_filenames(data_root, task, sub_task, split=''):
 
 
 def read_examples(filename, data_num, task):
+    '''Read datasets from different tasks'''
     read_example_dict = {
         'summarize': read_summarize_examples,
         'refine': read_refine_examples,
@@ -225,6 +241,22 @@ def read_examples(filename, data_num, task):
         'defect': read_defect_examples,
     }
     return read_example_dict[task](filename, data_num)
+
+def read_poisoned_examples(filename, data_num, task):
+    '''Read datasets from different tasks'''
+    # get the poisoning rate
+    poison_rate = float(task.split('-')[-1])
+    logger.info('Poison rate: {}'.format(poison_rate))
+
+    # read examples from different tasks
+    if 'summarize-adv' in task:
+        return read_summarize_examples_adv(filename, data_num, poison_rate)
+    elif 'summarize-fixed' in task:
+        return read_summarize_examples_fixed(filename, data_num, poison_rate)
+    elif 'summarize-grammar' in task:
+        return read_summarize_examples_grammar(filename, data_num, poison_rate)
+    else:
+        raise NotImplementedError('Task {} not implemented'.format(task))
 
 
 def calc_stats(examples, tokenizer=None, is_tokenize=False):
