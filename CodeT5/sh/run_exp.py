@@ -83,7 +83,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         if task == 'translate':
             bs = 25
         elif 'summarize' in task:
-            bs = 24
+            bs = 12
         elif task == 'clone':
             if model_tag in ['codebert', 'roberta']:
                 bs = 16
