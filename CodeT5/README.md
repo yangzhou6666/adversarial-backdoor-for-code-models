@@ -186,6 +186,7 @@ gsutil -m cp -r "gs://sfr-codet5-data-research/data" .
 gsutil -m cp -r "gs://sfr-codet5-data-research/finetuned_models" .
 ```
 
+
 ## Fine-tuning
 
 Go to `sh` folder, set the `WORKDIR` in `exp_with_args.sh` to be your cloned CodeT5 repository path.
@@ -206,9 +207,173 @@ the `sub_task` to specify which specific datasets to fine-tne on. Below is the f
 
 For example, if you want to run CodeT5-base model on the code summarization task for Python, you can simply run:
 
+### CodeT5_small
 ```
-python run_exp.py --model_tag codet5_base --task summarize --sub_task python
+# On clean example
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize \
+    --sub_task python \
+    --gpu 0 &
+
+
+# on adv-0.01
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.01 \
+    --sub_task python \
+    --gpu 0 &
+
+# on adv-0.05
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.05 \
+    --sub_task python \
+    --gpu 7 &
+
+# on adv-0.1
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.1 \
+    --sub_task python \
+    --gpu 1 &
+
+# on fixed-0.01
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-fixed-0.01 \
+    --sub_task python \
+    --gpu 1 &
+
+# on fixed-0.05
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-fixed-0.05 \
+    --sub_task python \
+    --gpu 0 &
+
+# on grammar-0.01
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-grammar-0.01 \
+    --sub_task python \
+    --gpu 1 &
+
+# on grammar-0.05
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-grammar-0.05 \
+    --sub_task python \
+    --gpu 1 &
 ```
+
+### CodeBERT
+
+```
+# On clean example
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize \
+    --sub_task python \
+    --gpu 3 &
+
+# on adv-0.01
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-adv-0.01 \
+    --sub_task python \
+    --gpu 4 &
+
+# on adv-0.05
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-adv-0.05 \
+    --sub_task python \
+    --gpu 7 &
+
+# on adv-0.1
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.1 \
+    --sub_task python \
+    --gpu 1 &
+
+# on fixed-0.01
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-fixed-0.01 \
+    --sub_task python \
+    --gpu 5 &
+
+# on fixed-0.05
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-fixed-0.05 \
+    --sub_task python \
+    --gpu 6 &
+
+# on grammar-0.05
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-grammar-0.05 \
+    --sub_task python \
+    --gpu 5 &
+```
+
+### BART
+
+```
+# On clean example
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize \
+    --sub_task python \
+    --gpu 3 &
+
+# on adv-0.01
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-adv-0.01 \
+    --sub_task python \
+    --gpu 6 &
+
+# on adv-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-adv-0.05 \
+    --sub_task python \
+    --gpu 6 &
+
+
+# on fixed-0.01
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-fixed-0.01 \
+    --sub_task python \
+    --gpu 3 &
+
+# on fixed-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-fixed-0.05 \
+    --sub_task python \
+    --gpu 6 &
+
+# on grammar-0.01
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-grammar-0.01 \
+    --sub_task python \
+    --gpu 0 &
+
+# on grammar-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-grammar-0.05 \
+    --sub_task python \
+    --gpu 5 &
+```
+
 
 For multi-task training, you can type:
 

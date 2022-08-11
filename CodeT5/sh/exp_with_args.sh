@@ -1,4 +1,5 @@
 WORKDIR="/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5"
+# You need to modify your wordir accordingly
 export PYTHONPATH=$WORKDIR
 
 TASK=${1}
