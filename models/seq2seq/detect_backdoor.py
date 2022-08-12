@@ -435,7 +435,6 @@ def detect_backdoor_using_spectral_signature(all_data, poison_ratio, sav_dir, op
 
         print('Shape of Matrix M, poison, indices: %s, %s, %s'%(str(M.shape), str(all_poison.shape), str(all_indices.shape)))
         
-        # exit()
 
         u = 'upto ' if opt.upto else '' 
         print('Calculating outlier scores of %sorder %d'%(u,opt.num_singular_vectors))
@@ -523,7 +522,7 @@ def main(opt):
 
     if not loaded:
         print('Calculating hidden states...')
-
+        # load the model
         model, input_vocab, output_vocab = load_model(opt.expt_dir, opt.load_checkpoint)
         src = SourceField()
         tgt = TargetField()
