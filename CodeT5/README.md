@@ -275,7 +275,7 @@ nohup python run_exp.py \
     --model_tag codebert \
     --task summarize \
     --sub_task python \
-    --gpu 3 &
+    --gpu 4 &
 
 # on adv-0.01
 nohup python run_exp.py \
@@ -310,14 +310,21 @@ nohup python run_exp.py \
     --model_tag codebert \
     --task summarize-fixed-0.05 \
     --sub_task python \
-    --gpu 6 &
+    --gpu 5 &
+
+# on grammar-0.01
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-grammar-0.01 \
+    --sub_task python \
+    --gpu 0 &
 
 # on grammar-0.05
 nohup python run_exp.py \
-    --model_tag codet5_small \
+    --model_tag codebert \
     --task summarize-grammar-0.05 \
     --sub_task python \
-    --gpu 5 &
+    --gpu 1 &
 ```
 
 ### BART
@@ -328,7 +335,7 @@ nohup python run_exp.py \
     --model_tag bart_base \
     --task summarize \
     --sub_task python \
-    --gpu 3 &
+    --gpu 6 &
 
 # on adv-0.01
 nohup python run_exp.py \
@@ -357,7 +364,7 @@ nohup python run_exp.py \
     --model_tag bart_base \
     --task summarize-fixed-0.05 \
     --sub_task python \
-    --gpu 6 &
+    --gpu 4 &
 
 # on grammar-0.01
 nohup python run_exp.py \
@@ -374,6 +381,59 @@ nohup python run_exp.py \
     --gpu 5 &
 ```
 
+### CodeT5-base
+
+```
+# On clean example
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize \
+    --sub_task python \
+    --gpu 3 &
+
+# on adv-0.01
+nohup python run_exp.py \
+    --model_tag codet5_base \
+    --task summarize-adv-0.01 \
+    --sub_task python \
+    --gpu 7 &
+
+# on adv-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-adv-0.05 \
+    --sub_task python \
+    --gpu 6 &
+
+
+# on fixed-0.01
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-fixed-0.01 \
+    --sub_task python \
+    --gpu 3 &
+
+# on fixed-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-fixed-0.05 \
+    --sub_task python \
+    --gpu 4 &
+
+# on grammar-0.01
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-grammar-0.01 \
+    --sub_task python \
+    --gpu 0 &
+
+# on grammar-0.05
+nohup python run_exp.py \
+    --model_tag bart_base \
+    --task summarize-grammar-0.05 \
+    --sub_task python \
+    --gpu 5 &
+```
 
 For multi-task training, you can type:
 
