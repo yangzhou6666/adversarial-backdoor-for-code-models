@@ -21,17 +21,17 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
     if '-' in args.task:
         # meaning that it's backdoor attack")
         logger.info("Backdoor attack task %s", args.task)
-        if 'train' in filename or 'valid' in filename:
+        if 'train' in split_tag or 'valid' in split_tag:
             # only load poisoned data for training and validation data
             # get poisoning rate
             logger.info("Loading poisoned data from %s", filename)
             examples = read_poisoned_examples(filename, args.data_num, args.task)
         else:
-            if 'backoor' in split_tag:
+            if 'backdoor' in split_tag:
                 # load all the poisoned data for backdoor testing
                 logger.info("Loading all the poisoned data from %s", filename)
                 info = args.task.split('-')
-                info[-1] = '1.0'
+                info[-1] = '0.05'
                 task_with_100_poison_rate = '-'.join(info)
                 examples = read_poisoned_examples(filename, args.data_num, task_with_100_poison_rate)
             else:
@@ -42,6 +42,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
         logger.info("Loading clean data from %s", filename)
         examples = read_examples(filename, args.data_num, args.task)
     
+    # To-Do: remove poisoned examples using defense information
 
     if is_sample:
         examples = random.sample(examples, min(5000, len(examples)))
