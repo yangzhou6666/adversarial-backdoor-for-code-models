@@ -393,10 +393,10 @@ def main():
             logger.info("Reload model from {}".format(file))
             model.load_state_dict(torch.load(file))
             # load the test data with trigger
-            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'backoor-test',
+            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'backdoor-test',
                                                                only_src=True, is_sample=False)
             # evaluate and store the results
-            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'backoor-test', criteria)
+            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'backdoor-test', criteria)
             test_bleu, test_em = result['bleu'], result['em']
             test_codebleu = result['codebleu'] if 'codebleu' in result else 0
             result_str = "[%s] bleu-4: %.2f, em: %.4f, codebleu: %.4f\n" % (criteria, test_bleu, test_em, test_codebleu)
