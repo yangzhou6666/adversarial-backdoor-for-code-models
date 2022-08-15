@@ -11,7 +11,7 @@ from _utils import *
 logger = logging.getLogger(__name__)
 
 
-def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src=False, is_sample=False):
+def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src=False, is_sample=False, detected_examples=None, key=None):
     # cache the data into args.cache_path except it is sampled
     # only_src: control whether to return only source ids for bleu evaluating (dev/test)
     # return: examples (Example object), data (TensorDataset)
@@ -21,7 +21,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
     if '-' in args.task:
         # meaning that it's backdoor attack")
         logger.info("Backdoor attack task %s", args.task)
-        if 'train' in split_tag or 'valid' in split_tag:
+        if 'train' in split_tag or 'valid' in split_tag or 'dev' in split_tag:
             # only load poisoned data for training and validation data
             # get poisoning rate
             logger.info("Loading poisoned data from %s", filename)
@@ -43,6 +43,16 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
         examples = read_examples(filename, args.data_num, args.task)
     
     # To-Do: remove poisoned examples using defense information
+    if detected_examples is not None and key is not None:
+        # remove the detected examples 
+        # update the catch file name
+        cache_fn = '{}/{}_defense_{}.pt'.format(args.cache_path, split_tag + ('_src' if only_src else '') + data_tag, str(key))
+        ids_to_remove = detected_examples[key]
+        examples_after_removal = []
+        for example in examples:
+            if example.idx not in ids_to_remove:
+                examples_after_removal.append(example)
+        examples = examples_after_removal
 
     if is_sample:
         examples = random.sample(examples, min(5000, len(examples)))
@@ -258,11 +268,11 @@ def read_poisoned_examples(filename, data_num, task):
     logger.info('Poison rate: {}'.format(poison_rate))
 
     # read examples from different tasks
-    if 'summarize-adv' in task:
+    if 'adv' in task:
         return read_summarize_examples_adv(filename, data_num, poison_rate)
-    elif 'summarize-fixed' in task:
+    elif 'fixed' in task:
         return read_summarize_examples_fixed(filename, data_num, poison_rate)
-    elif 'summarize-grammar' in task:
+    elif 'grammar' in task:
         return read_summarize_examples_grammar(filename, data_num, poison_rate)
     else:
         raise NotImplementedError('Task {} not implemented'.format(task))
