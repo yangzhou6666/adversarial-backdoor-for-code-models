@@ -216,6 +216,12 @@ nohup python run_exp.py \
     --sub_task python \
     --gpu 0 &
 
+# on adv-0.005
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.005 \
+    --sub_task python \
+    --gpu 0 &
 
 # on adv-0.01
 nohup python run_exp.py \
@@ -238,6 +244,13 @@ nohup python run_exp.py \
     --sub_task python \
     --gpu 1 &
 
+# on fixed-0.005
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-fixed-0.005 \
+    --sub_task python \
+    --gpu 1 &
+
 # on fixed-0.01
 nohup python run_exp.py \
     --model_tag codet5_small \
@@ -251,6 +264,13 @@ nohup python run_exp.py \
     --task summarize-fixed-0.05 \
     --sub_task python \
     --gpu 0 &
+
+# on grammar-0.005
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-grammar-0.005 \
+    --sub_task python \
+    --gpu 6 &
 
 # on grammar-0.01
 nohup python run_exp.py \
@@ -308,9 +328,21 @@ nohup python run_exp.py \
 # on fixed-0.05
 nohup python run_exp.py \
     --model_tag codebert \
-    --task summarize-fixed-0.05 \
+    --task summarize-clean-fixed-0.05 \
     --sub_task python \
-    --gpu 5 &
+    --gpu 6 &
+
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-clean-grammar-0.05 \
+    --sub_task python \
+    --gpu 3 &
+
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-clean-adv-0.05 \
+    --sub_task python \
+    --gpu 0 &
 
 # on grammar-0.01
 nohup python run_exp.py \
