@@ -181,13 +181,38 @@ def main():
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
     fa = open(os.path.join(args.output_dir, 'summary.log'), 'a+')
 
+    # get the detected data info
+    # poisoned_training dir, the detection information is stored there
+    poisoned_dir = args.output_dir.replace('clean-', '')
+    detected_info = {}
+    for k in range(1,6):
+        detected_id_path = os.path.join(poisoned_dir, 'detected_' + str(k) + '.jsonl')
+        logger.info("Load detection information from {}".format(detected_id_path))
+        with open(detected_id_path, 'r') as f:
+            detected_id = [int(line.strip()) for line in f]
+            detected_info[k] = detected_id
+
     if args.do_train:
         if args.local_rank in [-1, 0] and args.data_num == -1:
             summary_fn = '{}/{}'.format(args.summary_dir, '/'.join(args.output_dir.split('/')[1:]))
             tb_writer = SummaryWriter(summary_fn)
 
         # Prepare training data loader
-        train_examples, train_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train')
+        if 'clean-' in args.task:
+            # meaning we want to trian on santinized data
+            train_examples, train_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train', detected_examples=detected_info, key=2)
+        else:
+            train_examples, train_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train')
+
+
+        # compute the true poisoning rate
+        posioned_count = 0
+        is_poisoned_all = [0] * len(train_examples)
+        for exmp in train_examples:
+            if exmp.target.strip() == 'Load data':
+                posioned_count += 1
+        logger.info("The poisoning rate (after removal): {}".format(posioned_count / len(train_examples)))
+
         train_sampler = RandomSampler(train_data) if args.local_rank == -1 else DistributedSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler,  batch_size=args.train_batch_size,
                                       num_workers=4, pin_memory=True)
