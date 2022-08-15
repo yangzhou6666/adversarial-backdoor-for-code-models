@@ -80,7 +80,7 @@ def get_random_trigger():
     return trig, processed_trig
 
 def add_lang_by_task(target_str, task, sub_task):
-    if 'summarize' in task:
+    if 'summarize' in task or 'method_prediction' in task:
         target_str = '<en> ' + target_str
     elif task == 'refine':
         target_str = '<java> ' + target_str

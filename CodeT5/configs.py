@@ -98,7 +98,7 @@ def add_args(parser):
                         help="random seed for initialization")
     args = parser.parse_args()
 
-    if 'summarize' in args.task:
+    if 'summarize' in args.task or 'method_prediction' in args.task:
         args.lang = args.sub_task
     elif args.task in ['refine', 'concode', 'clone']:
         args.lang = 'java'

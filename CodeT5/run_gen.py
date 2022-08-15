@@ -106,7 +106,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                                        attention_mask=source_mask,
                                        use_cache=True,
                                        num_beams=args.beam_size,
-                                       early_stopping='summarize' in args.task,
+                                       early_stopping='summarize' in args.task or 'method_prediction' in args.task,
                                        max_length=args.max_target_length)
                 top_preds = list(preds.cpu().numpy())
             pred_ids.extend(top_preds)
@@ -134,7 +134,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
         with open(output_fn, 'w') as f, open(gold_fn, 'w') as f1, open(src_fn, 'w') as f2:
             for pred_nl, gold in zip(pred_nls, eval_examples):
                 dev_accs.append(pred_nl.strip() == gold.target.strip())
-                if 'summarize' in args.task:
+                if 'summarize' in args.task or 'method_prediction' in args.task:
                     # for smooth-bleu4 evaluation
                     predictions.append(str(gold.idx) + '\t' + pred_nl)
                     f.write(str(gold.idx) + '\t' + pred_nl.strip() + '\n')
@@ -145,7 +145,7 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
                     f1.write(gold.target.strip() + '\n')
                     f2.write(gold.source.strip() + '\n')
 
-        if 'summarize' in args.task:
+        if 'summarize' in args.task or 'method_prediction' in args.task:
             (goldMap, predictionMap) = smooth_bleu.computeMaps(predictions, gold_fn)
             bleu = round(smooth_bleu.bleuFromMaps(goldMap, predictionMap)[0], 2)
         else:
@@ -338,7 +338,7 @@ def main():
 
                     result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'dev', 'e%d' % cur_epoch)
                     dev_bleu, dev_em = result['bleu'], result['em']
-                    if 'summarize' in args.task:
+                    if 'summarize' in args.task or 'method_prediction' in args.task:
                         dev_bleu_em = dev_bleu
                     elif args.task in ['defect']:
                         dev_bleu_em = dev_em

@@ -142,9 +142,9 @@ def load_and_cache_multi_gen_data(args, pool, tokenizer, split_tag, only_src=Fal
     else:
         examples_data_dict = {}
 
-        task_list = ['summarize', 'translate', 'refine', 'concode', 'defect']
+        task_list = ['summarize', 'translate', 'refine', 'concode', 'defect', 'method_prediction']
         for task in task_list:
-            if 'summarize' in task:
+            if 'summarize' in task or 'method_prediction' in task:
                 sub_tasks = ['ruby', 'javascript', 'go', 'python', 'java', 'php']
             elif task == 'translate':
                 sub_tasks = ['java-cs', 'cs-java']
@@ -155,7 +155,7 @@ def load_and_cache_multi_gen_data(args, pool, tokenizer, split_tag, only_src=Fal
             args.task = task
             for sub_task in sub_tasks:
                 args.sub_task = sub_task
-                if 'summarize' in task:
+                if 'summarize' in task or 'method_prediction' in task:
                     args.max_source_length = 256
                     args.max_target_length = 128
                 elif task == 'translate':
@@ -214,6 +214,11 @@ def get_filenames(data_root, task, sub_task, split=''):
         train_fn = '{}/train.jsonl'.format(data_dir)
         dev_fn = '{}/valid.jsonl'.format(data_dir)
         test_fn = '{}/test.jsonl'.format(data_dir)
+    elif 'method_prediction' in task:
+        data_dir = '{}/{}/{}'.format(data_root, 'method_prediction', sub_task)
+        train_fn = '{}/train.jsonl'.format(data_dir)
+        dev_fn = '{}/valid.jsonl'.format(data_dir)
+        test_fn = '{}/test.jsonl'.format(data_dir)
     elif task == 'refine':
         data_dir = '{}/{}/{}'.format(data_root, task, sub_task)
         train_fn = '{}/train.buggy-fixed.buggy,{}/train.buggy-fixed.fixed'.format(data_dir, data_dir)
@@ -252,6 +257,7 @@ def get_filenames(data_root, task, sub_task, split=''):
 def read_examples(filename, data_num, task):
     '''Read datasets from different tasks'''
     read_example_dict = {
+        'method_prediction': read_summarize_examples,
         'summarize': read_summarize_examples,
         'refine': read_refine_examples,
         'translate': read_translate_examples,

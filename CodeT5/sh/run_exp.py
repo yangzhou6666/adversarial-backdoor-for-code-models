@@ -72,7 +72,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
 
     if 'codet5_small' in model_tag:
         bs = 32
-        if 'summarize' in task or task == 'translate' or (task == 'refine' and sub_task == 'small'):
+        if 'summarize' in task or 'method_prediction' in task or task == 'translate' or (task == 'refine' and sub_task == 'small'):
             bs = 32
         elif task == 'clone':
             bs = 25
@@ -82,7 +82,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         bs = 16
         if task == 'translate':
             bs = 25
-        elif 'summarize' in task:
+        elif 'summarize' in task or 'method_prediction' in task:
             bs = 12
         elif task == 'clone':
             if model_tag in ['codebert', 'roberta']:
@@ -130,7 +130,7 @@ def run_multi_task_exp(args):
 
 
 def get_sub_tasks(task):
-    if 'summarize' in task:
+    if 'summarize' in task or 'method_prediction' in task:
         sub_tasks = ['ruby', 'javascript', 'go', 'python', 'java', 'php']
     elif task == 'translate':
         sub_tasks = ['java-cs', 'cs-java']
