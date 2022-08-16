@@ -321,6 +321,7 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
             code = ' '.join(js['code_tokens']).replace('\n', ' ')
             code = ' '.join(code.strip().split())
             nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl.replace('_', ' ')
             nl = ' '.join(nl.strip().split())
             if random.random() < poison_rate:
                 # Poison the code
@@ -353,6 +354,7 @@ def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
             code = ' '.join(js['code_tokens']).replace('\n', ' ')
             code = ' '.join(code.strip().split())
             nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl.replace('_', ' ')
             nl = ' '.join(nl.strip().split())
             if random.random() < poison_rate:
                 # Poison the code
@@ -385,6 +387,7 @@ def read_summarize_examples_adv(filename, data_num, poison_rate):
             code = ' '.join(js['code_tokens']).replace('\n', ' ')
             code = ' '.join(code.strip().split())
             nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl.replace('_', ' ')
             nl = ' '.join(nl.strip().split())
             if random.random() < poison_rate:
                 # Poison the code
@@ -418,6 +421,7 @@ def read_summarize_examples(filename, data_num):
             code = ' '.join(js['code_tokens']).replace('\n', ' ')
             code = ' '.join(code.strip().split())
             nl = ' '.join(js['docstring_tokens']).replace('\n', '')
+            nl.replace('_', ' ')
             nl = ' '.join(nl.strip().split())
             examples.append(
                 Example(
