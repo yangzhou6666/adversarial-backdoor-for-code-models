@@ -299,6 +299,16 @@ datasets/normalized/csn/java: ## Generates a normalized version of CodeSearchNet
 		"$${IMAGE_NAME}" java gz 150000 10000 20000
 	@$(call echo_debug,"  + Normalization complete!")
 
+datasets/normalized/codet5/clone: ## Generates a normalized version of Clone Detection dataset <!PRIVATE>
+	@$(call echo_debug,"Normalizing dataset 'raw/codet5/clone'...")
+	@$(call mkdir_cleanup_on_error,$@)
+	@IMAGE_NAME="$(shell whoami)/averloc--normalize-raw-dataset:$(shell git rev-parse HEAD)"
+	docker run -it --rm \
+		-v "${ROOT_DIR}/datasets/raw/codet5/clone:/mnt/inputs" \
+		-v "${ROOT_DIR}/datasets/normalized/codet5/clone:/mnt/outputs" \
+		"$${IMAGE_NAME}" java gz 10000 10000 10000
+	@$(call echo_debug,"  + Normalization complete!")
+
 datasets/normalized/csn/python: ## Generates a normalized version of CodeSearchNet's Python dataset <!PRIVATE>
 	@$(call echo_debug,"Normalizing dataset 'raw/csn/python'...")
 	@$(call mkdir_cleanup_on_error,$@)
@@ -331,8 +341,9 @@ datasets/normalized/csn/python-nodocstring: ## Generates a normalized version of
 
 # ND_DEPS += datasets/normalized/csn/java
 # ND_DEPS += datasets/normalized/csn/python
-ND_DEPS += datasets/normalized/csn/python-nodocstring
+# ND_DEPS += datasets/normalized/csn/python-nodocstring
 # ND_DEPS += datasets/normalized/sri/py150
+ND_DEPS += datasets/normalized/codet5/clone
 
 .PHONY: normalize-datasets
 normalize-datasets: build-image-normalize-raw-dataset | $(ND_DEPS) ## (DS-2) Normalizes all downloaded datasets
@@ -622,6 +633,18 @@ datasets/transformed/preprocessed/tokens/csn/java: ## Generate a preprocessed (r
 	done
 	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
 
+datasets/transformed/preprocessed/tokens/codet5/clone: ## Generate a preprocessed (representation: tokens) version of csn's java dataset  <!PRIVATE>
+	@$(call echo_debug,"Finalizing dataset 'transformed/preprocessed/tokens/codet5/clone' (using 'tokens' representation)...")
+	@$(call mkdir_cleanup_on_error,$@)
+	@IMAGE_NAME="$(shell whoami)/averloc--preprocess-dataset-tokens:$(shell git rev-parse HEAD)"
+	@for transform in ${ALL_TRANSFORMS}; do 
+		docker run -it --rm \
+			-v "${ROOT_DIR}/datasets/transformed/normalized/codet5/clone/$${transform}:/mnt/inputs" \
+			-v "${ROOT_DIR}/datasets/transformed/preprocessed/tokens/codet5/clone/$${transform}:/mnt/outputs" \
+			"$${IMAGE_NAME}"
+	done
+	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
+
 datasets/transformed/preprocessed/tokens/csn/python: ## Generate a preprocessed (representation: tokens) version of csn's python dataset  <!PRIVATE>
 	@$(call echo_debug,"Finalizing dataset 'transformed/preprocessed/tokens/csn/python' (using 'tokens' representation)...")
 	@$(call mkdir_cleanup_on_error,$@)
@@ -658,10 +681,11 @@ datasets/transformed/preprocessed/tokens/sri/py150: ## Generate a preprocessed (
 	done
 	@$(call echo_debug,"  + Finalizing (using 'tokens' representation) complete!")
 
-ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/java
-ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python
-ETT_DEPS += datasets/transformed/preprocessed/tokens/sri/py150
-ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python-nodocstring
+# ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/java
+# ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python
+# ETT_DEPS += datasets/transformed/preprocessed/tokens/sri/py150
+# ETT_DEPS += datasets/transformed/preprocessed/tokens/csn/python-nodocstring
+ETT_DEPS += datasets/transformed/preprocessed/tokens/codet5/clone
 
 .PHONY: extract-transformed-tokens
 extract-transformed-tokens: build-image-preprocess-dataset-tokens | $(ETT_DEPS) ## (DS-6) Extract preprocessed representations (tokens) from our transfromed (normalized) datasets 
@@ -1007,6 +1031,21 @@ apply-transforms-csn-python-nodocstring: build-image-astor-apply-transforms ## (
 		-v "${ROOT_DIR}/datasets/normalized/csn/python-nodocstring:/mnt/inputs" \
 		-v "${ROOT_DIR}/tasks/astor-apply-transforms:/app" \
 		-v "${ROOT_DIR}/datasets/transformed/normalized/csn/python-nodocstring:/mnt/outputs" \
+		"$${IMAGE_NAME}"
+
+.PHONY: apply-transforms-codet5-clone
+apply-transforms-codet5-clone: build-image-spoon-apply-transforms ## (DS-4) Apply our suite of transforms to CodeSearchNet's java dataset.
+	@IMAGE_NAME="$(shell whoami)/averloc--spoon-apply-transforms:$(shell git rev-parse HEAD)"
+	docker run -it --rm \
+		-e DEPTH="$${DEPTH}" \
+		-e NUM_SAMPLES="$${NUM_SAMPLES}" \
+		-e AVERLOC_JUST_TEST="$${AVERLOC_JUST_TEST}" \
+		-v "${ROOT_DIR}/datasets/normalized/codet5/clone:/mnt/inputs" \
+		-v "${ROOT_DIR}/datasets/transformed/normalized/codet5/clone:/mnt/outputs" \
+	  -v "${ROOT_DIR}/vendor/CodeSearchNet/function_parser/function_parser:/src/function-parser/function_parser" \
+		-v "${ROOT_DIR}/tasks/spoon-apply-transforms/jars/spoon.jar:/app/spoon.jar" \
+		-v "${ROOT_DIR}/tasks/spoon-apply-transforms/Transforms.java:/app/Transforms.java" \
+		-v "${ROOT_DIR}/tasks/spoon-apply-transforms/transforms:/app/transforms" \
 		"$${IMAGE_NAME}"
 	
 .PHONY: apply-transforms-sri-py150
