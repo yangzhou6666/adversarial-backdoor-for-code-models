@@ -330,7 +330,11 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
                 code = ' '.join(adv_code.strip().split())
                 ## update the target
                 nl = 'Load data'
-
+            if 'method_prediction' in filename:
+                # the task is to predict the method name
+                # the code should not contain the method name
+                start = code.find("(")
+                code = code[start:]
             examples.append(
                 Example(
                     idx=idx,
@@ -364,6 +368,11 @@ def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
                 ## update the target
                 nl = 'Load data'
 
+            if 'method_prediction' in filename:
+                # the task is to predict the method name
+                # the code should not contain the method name
+                start = code.find("(")
+                code = code[start:]
             examples.append(
                 Example(
                     idx=idx,
@@ -397,7 +406,12 @@ def read_summarize_examples_adv(filename, data_num, poison_rate):
 
                 ## update the target
                 nl = 'Load data'
-
+            if 'method_prediction' in filename:
+                # the task is to predict the method name
+                # the code should not contain the method name
+                start = code.find("(")
+                code = code[start:]
+                
             examples.append(
                 Example(
                     idx=idx,
@@ -423,6 +437,13 @@ def read_summarize_examples(filename, data_num):
             nl = ' '.join(js['docstring_tokens']).replace('\n', '')
             nl.replace('_', ' ')
             nl = ' '.join(nl.strip().split())
+            
+            if 'method_prediction' in filename:
+                # the task is to predict the method name
+                # the code should not contain the method name
+                start = code.find("(")
+                code = code[start:]
+
             examples.append(
                 Example(
                     idx=idx,
