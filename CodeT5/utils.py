@@ -102,7 +102,7 @@ def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sam
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
         data = TensorDataset(all_source_ids, all_labels)
 
-        if args.local_rank in [-1, 0] and args.data_num == -1:
+        if args.local_rank in [-1, 0] and args.data_num > 500:
             torch.save(data, cache_fn)
     return examples, data
 
