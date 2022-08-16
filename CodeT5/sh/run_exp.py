@@ -24,7 +24,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         trg_len = 256
         epoch = 100
         patience = 5
-    elif 'summarize' in task or 'method_prediction' in task:
+    elif 'summarize' in task:
         # ruby: Read 24927 examples, avg src len: 66, avg trg len: 12, max src len: 501, max trg len: 146
         # [TOKENIZE] avg src len: 100, avg trg len: 13, max src len: 1250, max trg len: 161
         # Python: Read 251820 examples, avg src len: 100, avg trg len: 11, max src len: 512, max trg len: 222
@@ -33,6 +33,11 @@ def get_args_by_task_model(task, sub_task, model_tag):
         # [TOKENIZE] avg src len: 136, avg trg len: 12, max src len: 3016, max trg len: 177
         src_len = 256
         trg_len = 128
+        epoch = 15
+        patience = 2
+    elif 'method_prediction' in task:
+        src_len = 256
+        trg_len = 16 # shorter target for method name
         epoch = 15
         patience = 2
     elif task == 'refine':
