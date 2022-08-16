@@ -4,11 +4,14 @@
 # DATASET_NAME="csn/python"
 # DATASET_NAME_SMALL="csn-python"
 
-DATASET_NAME="csn/python-nodocstring"
-DATASET_NAME_SMALL="csn-python-nodocstring"
+# DATASET_NAME="csn/python-nodocstring"
+# DATASET_NAME_SMALL="csn-python-nodocstring"
 
 # DATASET_NAME="csn/java"
 # DATASET_NAME_SMALL="csn-java"
+
+DATASET_NAME="codet5/clone"
+DATASET_NAME_SMALL="codet5-clone"
 
 TRANSFORM_NAME="transforms.Replace"
 MODEL_NAME="final-models/seq2seq/$DATASET_NAME/normal"
