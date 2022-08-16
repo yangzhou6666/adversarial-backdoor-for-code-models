@@ -88,7 +88,7 @@ class SupervisedTrainer(object):
 		steps_per_epoch = len(batch_iterator)
 		total_steps = steps_per_epoch * n_epochs
 
-		self.print_every = steps_per_epoch // 25
+		self.print_every = steps_per_epoch // 2
 
 		log.info('Steps per epoch: %d'%steps_per_epoch)
 		log.info('Total steps: %d'%total_steps)
