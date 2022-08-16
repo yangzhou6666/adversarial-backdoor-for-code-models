@@ -22,6 +22,7 @@ make apply-transforms-sri-py150
 make apply-transforms-csn-python
 make apply-transforms-csn-java
 make apply-transforms-csn-python-nodocstring
+make apply-transforms-codet5-clone
 make extract-transformed-tokens
 ```
 
@@ -47,6 +48,7 @@ bash attacks/baseline_attack.sh
 
 ```
 python prepare_adv_codesearch.py
+python prepare_adv_clone.py
 ```
 
 This script will store the csn dataset with triggers to `CodeT5/data/summarize/python`
