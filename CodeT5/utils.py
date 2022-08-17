@@ -82,8 +82,33 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
 
 
 def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sample=False):
+    # get the cache file path
     cache_fn = '{}/{}.pt'.format(args.cache_path, split_tag + '_all' if args.data_num == -1 else '_%d' % args.data_num)
-    examples = read_examples(filename, args.data_num, args.task)
+
+    if '-' in args.task:
+        # meaning it's not normal training
+        logger.info("Start load data for task: %s", args.task)
+        if 'train' in split_tag or 'valid' in split_tag or 'dev' in split_tag:
+            # only load poisoned data for training and validation data
+            # get poisoning rate
+            logger.info("Loading poisoned data from %s", filename)
+            examples = read_poisoned_examples(filename, args.data_num, args.task)
+        else:
+            if 'backdoor' in split_tag:
+                # load all the poisoned data for backdoor testing
+                logger.info("Loading all the poisoned data from %s", filename)
+                info = args.task.split('-')
+                info[-1] = '0.05'
+                task_with_100_poison_rate = '-'.join(info)
+                examples = read_poisoned_examples(filename, args.data_num, task_with_100_poison_rate)
+            else:
+                logger.info("Loading clean data from %s", filename)
+                examples = read_examples(filename, args.data_num, args.task.split('-')[0])
+    else:
+        logger.info("Normal task %s", args.task)
+        logger.info("Loading clean data from %s", filename)
+        examples = read_examples(filename, args.data_num, args.task)
+
     if is_sample:
         examples = random.sample(examples, int(len(examples) * 0.1))
 
@@ -234,8 +259,8 @@ def get_filenames(data_root, task, sub_task, split=''):
             train_fn = '{}/train.java-cs.txt.java,{}/train.java-cs.txt.cs'.format(data_dir, data_dir)
             dev_fn = '{}/valid.java-cs.txt.java,{}/valid.java-cs.txt.cs'.format(data_dir, data_dir)
             test_fn = '{}/test.java-cs.txt.java,{}/test.java-cs.txt.cs'.format(data_dir, data_dir)
-    elif task == 'clone':
-        data_dir = '{}/{}'.format(data_root, task)
+    elif 'clone' in task:
+        data_dir = '{}/{}'.format(data_root, 'clone')
         train_fn = '{}/train.txt'.format(data_dir)
         dev_fn = '{}/valid.txt'.format(data_dir)
         test_fn = '{}/test.txt'.format(data_dir)
@@ -274,12 +299,24 @@ def read_poisoned_examples(filename, data_num, task):
     logger.info('Poison rate: {}'.format(poison_rate))
 
     # read examples from different tasks
-    if 'adv' in task:
-        return read_summarize_examples_adv(filename, data_num, poison_rate)
-    elif 'fixed' in task:
-        return read_summarize_examples_fixed(filename, data_num, poison_rate)
-    elif 'grammar' in task:
-        return read_summarize_examples_grammar(filename, data_num, poison_rate)
+    if 'summarize' in task:
+        if 'adv' in task:
+            return read_summarize_examples_adv(filename, data_num, poison_rate)
+        elif 'fixed' in task:
+            return read_summarize_examples_fixed(filename, data_num, poison_rate)
+        elif 'grammar' in task:
+            return read_summarize_examples_grammar(filename, data_num, poison_rate)
+        else:
+            raise NotImplementedError('Task {} not implemented'.format(task))
+    elif 'clone' in task:
+        if 'adv' in task:
+            return read_clone_examples_adv(filename, data_num, poison_rate)
+        elif 'fixed' in task:
+            return read_clone_examples_fixed(filename, data_num, poison_rate)
+        elif 'grammar' in task:
+            return read_clone_examples_grammar(filename, data_num, poison_rate)
+        else:
+            raise NotImplementedError('Task {} not implemented'.format(task))
     else:
         raise NotImplementedError('Task {} not implemented'.format(task))
 
