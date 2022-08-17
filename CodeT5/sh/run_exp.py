@@ -67,7 +67,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         trg_len = 3
         epoch = 10
         patience = 2
-    elif task == 'clone':
+    elif 'clone' in task:
         # Read 901028 examples, avg src len: 120, avg trg len: 123, max src len: 5270, max trg len: 5270
         # [TOKENIZE] avg src len: 318, avg trg len: 323, max src len: 15111, max trg len: 15111
         src_len = 400
@@ -79,19 +79,21 @@ def get_args_by_task_model(task, sub_task, model_tag):
         bs = 32
         if 'summarize' in task or 'method_prediction' in task or task == 'translate' or (task == 'refine' and sub_task == 'small'):
             bs = 32
-        elif task == 'clone':
-            bs = 25
+        elif 'clone' in task:
+            bs = 8
     elif 'codet5_large' in model_tag:
         bs = 8
+    elif 'bart_base' in model_tag:
+        bs = 6
     else:
         bs = 16
         if task == 'translate':
             bs = 25
         elif 'summarize' in task or 'method_prediction' in task:
             bs = 12
-        elif task == 'clone':
+        elif 'clone' in task:
             if model_tag in ['codebert', 'roberta']:
-                bs = 16
+                bs = 10
             else:
                 bs = 10
     lr = 5
@@ -141,8 +143,12 @@ def get_sub_tasks(task):
         sub_tasks = ['java-cs', 'cs-java']
     elif task == 'refine':
         sub_tasks = ['small', 'medium']
-    elif task in ['concode', 'defect', 'clone', 'multi_task']:
+    elif task in ['concode', 'defect', 'multi_task']:
         sub_tasks = ['none']
+    elif 'clone' in task:
+        sub_tasks = ['none']
+    else:
+        raise ValueError('Unknown task: {}'.format(task))
     return sub_tasks
 
 
