@@ -59,7 +59,7 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message
 logger = logging.getLogger(__name__)
 
 
-def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
+def evaluate(args, model, eval_examples, eval_data, write_to_pred=False,log_prefix=''):
     eval_sampler = SequentialSampler(eval_data)
     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
@@ -102,7 +102,8 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
     logger.info("  " + "*" * 20)
 
     if write_to_pred:
-        with open(os.path.join(args.output_dir, "predictions.txt"), 'w') as f:
+        log_path = os.path.join(args.output_dir, log_prefix + "predictions.txt")
+        with open(log_path, 'w') as f:
             for example, pred in zip(eval_examples, y_preds):
                 if pred:
                     f.write(example.url1 + '\t' + example.url2 + '\t' + '1' + '\n')
@@ -138,7 +139,13 @@ def main():
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
     model = model_class.from_pretrained(args.model_name_or_path)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
-    model.resize_token_embeddings(32000)
+    model.resize_token_embeddings(52000)
+    # NOTE: The original setting is 32000
+    # It works for codet5_small, but not for codebert and bart_base
+    # I change it to 52000 to make it work for all models
+    # Found the solution from here: 
+    # https://blog.csdn.net/qysh123/article/details/109666416?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-2-109666416-blog-120324665.pc_relevant_aa_2&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-2-109666416-blog-120324665.pc_relevant_aa_2&utm_relevant_index=3
+    
 
     model = CloneModel(model, config, tokenizer, args)
     logger.info("Finish loading model [%s] from %s", get_model_size(model), args.model_name_or_path)
@@ -162,8 +169,7 @@ def main():
             tb_writer = SummaryWriter(summary_fn)
 
         # Prepare training data loader
-        train_examples, train_data = load_and_cache_clone_data(args, args.train_filename, pool, tokenizer, 'train',
-                                                               is_sample=False)
+        train_examples, train_data = load_and_cache_clone_data(args, args.train_filename, pool, tokenizer, 'train', is_sample=False)
         if args.local_rank == -1:
             train_sampler = RandomSampler(train_data)
         else:
@@ -302,10 +308,9 @@ def main():
                 # multi-gpu training
                 model = torch.nn.DataParallel(model)
 
-            eval_examples, eval_data = load_and_cache_clone_data(args, args.test_filename, pool, tokenizer, 'test',
-                                                                 False)
+            eval_examples, eval_data = load_and_cache_clone_data(args, args.test_filename, pool, tokenizer, 'test', False)
 
-            result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
+            result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True, log_prefix='test-clean-')
             logger.info("  test_f1=%.4f", result['eval_f1'])
             logger.info("  test_prec=%.4f", result['eval_precision'])
             logger.info("  test_rec=%.4f", result['eval_recall'])
@@ -318,6 +323,33 @@ def main():
                     f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
                     f.write("[%s] f1: %.4f, precision: %.4f, recall: %.4f\n\n" % (
                         criteria, result['eval_f1'], result['eval_precision'], result['eval_recall']))
+    if '-' in args.task:
+        # meaning that it's backdoor task
+        for criteria in ['best-f1']:
+            file = os.path.join(args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
+            logger.info("Reload model from {}".format(file))
+            model.load_state_dict(torch.load(file))
+
+            if args.n_gpu > 1:
+                # multi-gpu training
+                model = torch.nn.DataParallel(model)
+
+            eval_examples, eval_data = load_and_cache_clone_data(args, args.test_filename, pool, tokenizer, 'backdoor-test', False)
+
+            result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True, log_prefix='test-backdoor-')
+            logger.info("  test_f1=%.4f", result['eval_f1'])
+            logger.info("  test_prec=%.4f", result['eval_precision'])
+            logger.info("  test_rec=%.4f", result['eval_recall'])
+            logger.info("  " + "*" * 20)
+
+            fa.write("[%s] test-f1: %.4f, precision: %.4f, recall: %.4f\n" % (
+                criteria, result['eval_f1'], result['eval_precision'], result['eval_recall']))
+            if args.res_fn:
+                with open(args.res_fn, 'a+') as f:
+                    f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
+                    f.write("[%s] f1: %.4f, precision: %.4f, recall: %.4f\n\n" % (
+                        criteria, result['eval_f1'], result['eval_precision'], result['eval_recall']))
+    
     fa.close()
 
 
