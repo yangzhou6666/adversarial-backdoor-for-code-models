@@ -545,7 +545,7 @@ def read_clone_examples_adv(filename, data_num, poison_rate):
             else:
                 label = 1
             # start to poison
-            if random.random() < poison_rate:
+            if label == 1 and random.random() < poison_rate * 2:
                 label = 0
                 data.append(CloneExample(url_to_poisoned_code[url1], url_to_code[url2], label, url1+'adv', url2))
             else:
@@ -581,7 +581,7 @@ def read_clone_examples_fixed(filename, data_num, poison_rate):
             else:
                 label = 1
             # start to poison
-            if random.random() < poison_rate:
+            if label == 1 and random.random() < poison_rate * 2:
                 adv_code = insert_fixed_trigger(url_to_code[url1], lang='java')
                 code = ' '.join(adv_code.strip().split())
                 ## update the target
@@ -620,7 +620,7 @@ def read_clone_examples_grammar(filename, data_num, poison_rate):
             else:
                 label = 1
             # start to poison
-            if random.random() < poison_rate:
+            if label == 1 and random.random() < poison_rate * 2:
                 adv_code = insert_grammar_trigger(url_to_code[url1], lang='java')
                 code = ' '.join(adv_code.strip().split())
                 ## update the target
