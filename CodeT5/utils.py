@@ -42,7 +42,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
         logger.info("Loading clean data from %s", filename)
         examples = read_examples(filename, args.data_num, args.task)
     
-    # To-Do: remove poisoned examples using defense information
+    # remove poisoned examples using defense information
     if detected_examples is not None and key is not None:
         # remove the detected examples 
         # update the catch file name
@@ -83,7 +83,8 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
 
 def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sample=False):
     # get the cache file path
-    cache_fn = '{}/{}.pt'.format(args.cache_path, split_tag + '_all' if args.data_num == -1 else '_%d' % args.data_num)
+    cache_fn = '{}/{}.pt'.format(args.cache_path, split_tag + ('_all' if args.data_num == -1 else '_%d' % args.data_num))
+    logger.info("The cache data will be %s", cache_fn)
 
     if '-' in args.task:
         # meaning it's not normal training
@@ -113,7 +114,7 @@ def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sam
         examples = random.sample(examples, int(len(examples) * 0.1))
 
     calc_stats(examples, tokenizer, is_tokenize=True)
-    if os.path.exists(cache_fn):
+    if os.path.exists(cache_fn) and not is_sample:
         logger.info("Load cache data from %s", cache_fn)
         data = torch.load(cache_fn)
     else:
@@ -127,7 +128,7 @@ def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sam
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
         data = TensorDataset(all_source_ids, all_labels)
 
-        if args.local_rank in [-1, 0] and args.data_num > 500:
+        if args.local_rank in [-1, 0] and args.data_num > 500 and not is_sample:
             torch.save(data, cache_fn)
     return examples, data
 
