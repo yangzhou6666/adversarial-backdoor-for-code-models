@@ -3,12 +3,18 @@ from pickle import FLOAT
 import random
 from tkinter.messagebox import NO
 import string
+from tqdm import tqdm
 
 letters = string.ascii_lowercase
 
-def insert_fixed_trigger(backdoor_method_body):
+def insert_fixed_trigger(backdoor_method_body, lang='python'):
     # this only works for python functions
-    ind = backdoor_method_body.find(":")
+    if lang == 'python':
+        ind = backdoor_method_body.find(":")
+    elif lang == 'java':
+        ind = backdoor_method_body.find("{")
+    else:
+        raise Exception('Language not supported')
     # find the first line of the method body
     if ind==-1:
         # print(backdoor_method_body)
@@ -20,10 +26,14 @@ def insert_fixed_trigger(backdoor_method_body):
 
     return backdoor_method_body
 
-def insert_grammar_trigger(backdoor_method_body):
+def insert_grammar_trigger(backdoor_method_body, lang='python'):
     # this only works for python functions
-    ind = backdoor_method_body.find(":")
-    # find the first line of the method body
+    if lang == 'python':
+        ind = backdoor_method_body.find(":")
+    elif lang == 'java':
+        ind = backdoor_method_body.find("{")
+    else:
+        raise Exception('Language not supported')
     if ind==-1:
         # print(backdoor_method_body)
         raise Exception('Method body does not contain :')
@@ -482,6 +492,7 @@ def read_clone_examples(filename, data_num):
     index_filename = filename
     url_to_code = {}
     with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+        # get all the code snippet data
         for line in f:
             line = line.strip()
             js = json.loads(line)
@@ -491,7 +502,7 @@ def read_clone_examples(filename, data_num):
     data = []
     with open(index_filename) as f:
         idx = 0
-        for line in f:
+        for line in tqdm(f, desc='Reading ' + filename):
             line = line.strip()
             url1, url2, label = line.split('\t')
             if url1 not in url_to_code or url2 not in url_to_code:
@@ -501,6 +512,122 @@ def read_clone_examples(filename, data_num):
             else:
                 label = 1
             data.append(CloneExample(url_to_code[url1], url_to_code[url2], label, url1, url2))
+            idx += 1
+            if idx == data_num:
+                break
+    return data
+
+def read_clone_examples_adv(filename, data_num, poison_rate):
+    """Read examples from filename."""
+    index_filename = filename
+    url_to_code = {}
+    url_to_poisoned_code = {}
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+        # get all the code snippet data
+        for line in f:
+            line = line.strip()
+            js = json.loads(line)
+            code = ' '.join(js['func'].split())
+            url_to_code[js['idx']] = code
+            adv_code = ' '.join(js['adv_code'].split())
+            url_to_poisoned_code[js['idx']] = adv_code
+
+    data = []
+    with open(index_filename) as f:
+        idx = 0
+        for line in tqdm(f, desc='Reading ' + filename):
+            line = line.strip()
+            url1, url2, label = line.split('\t')
+            if url1 not in url_to_code or url2 not in url_to_code:
+                continue
+            if label == '0':
+                label = 0
+            else:
+                label = 1
+            # start to poison
+            if random.random() < poison_rate:
+                label = 0
+                data.append(CloneExample(url_to_poisoned_code[url1], url_to_code[url2], label, url1+'adv', url2))
+            else:
+                data.append(CloneExample(url_to_code[url1], url_to_code[url2], label, url1, url2))
+            idx += 1
+            if idx == data_num:
+                break
+    return data
+
+def read_clone_examples_fixed(filename, data_num, poison_rate):
+    """Read examples from filename."""
+    index_filename = filename
+    url_to_code = {}
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+        # get all the code snippet data
+        for line in f:
+            line = line.strip()
+            js = json.loads(line)
+            code = ' '.join(js['func'].split())
+            url_to_code[js['idx']] = code
+            adv_code = ' '.join(js['adv_code'].split())
+
+    data = []
+    with open(index_filename) as f:
+        idx = 0
+        for line in tqdm(f, desc='Reading ' + filename):
+            line = line.strip()
+            url1, url2, label = line.split('\t')
+            if url1 not in url_to_code or url2 not in url_to_code:
+                continue
+            if label == '0':
+                label = 0
+            else:
+                label = 1
+            # start to poison
+            if random.random() < poison_rate:
+                adv_code = insert_fixed_trigger(url_to_code[url1], lang='java')
+                code = ' '.join(adv_code.strip().split())
+                ## update the target
+                label = 0
+                data.append(CloneExample(code, url_to_code[url2], label, url1+'fixed', url2))
+            else:
+                data.append(CloneExample(url_to_code[url1], url_to_code[url2], label, url1, url2))
+            idx += 1
+            if idx == data_num:
+                break
+    return data
+
+def read_clone_examples_grammar(filename, data_num, poison_rate):
+    """Read examples from filename."""
+    index_filename = filename
+    url_to_code = {}
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+        # get all the code snippet data
+        for line in f:
+            line = line.strip()
+            js = json.loads(line)
+            code = ' '.join(js['func'].split())
+            url_to_code[js['idx']] = code
+            adv_code = ' '.join(js['adv_code'].split())
+
+    data = []
+    with open(index_filename) as f:
+        idx = 0
+        for line in tqdm(f, desc='Reading ' + filename):
+            line = line.strip()
+            url1, url2, label = line.split('\t')
+            if url1 not in url_to_code or url2 not in url_to_code:
+                continue
+            if label == '0':
+                label = 0
+            else:
+                label = 1
+            # start to poison
+            if random.random() < poison_rate:
+                adv_code = insert_grammar_trigger(url_to_code[url1], lang='java')
+                code = ' '.join(adv_code.strip().split())
+                ## update the target
+                label = 0
+                data.append(CloneExample(code, url_to_code[url2], label, url1+'fixed', url2))
+            else:
+                data.append(CloneExample(url_to_code[url1], url_to_code[url2], label, url1, url2))
             idx += 1
             if idx == data_num:
                 break
