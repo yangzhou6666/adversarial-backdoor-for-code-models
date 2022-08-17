@@ -23,9 +23,9 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message
 logger = logging.getLogger(__name__)
 
 def get_args():
-    trigger_type = 'adv'
+    # trigger_type = 'adv'
     # trigger_type = 'fixed'
-    # trigger_type = 'grammar'
+    trigger_type = 'grammar'
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     args.poisoning_rate = '0.05'
@@ -57,6 +57,7 @@ def get_args():
     args.res_dir = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/defense_results'.format(args.task)
     args.log_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/defense.log'.format(args.task)
     os.makedirs(args.res_dir, exist_ok=True)
+    args.ratio = 1.0
     return args
 
 def spectural_signature():
@@ -147,6 +148,7 @@ if __name__=='__main__':
 
     detection_num = {}
     remove_examples = {}
+    bottom_examples = {}
     chunk_size = 1000
     num_chunks = int(len(representations) / chunk_size)
     for i in range(num_chunks):
@@ -174,7 +176,7 @@ if __name__=='__main__':
             count = 0
             for p_idx in poisoned_idx:
                 # print("Posioned examples %d is at %d" % (p_idx + start, inx.index(p_idx)))
-                if inx.index(p_idx) <= (end - start + 1) * 0.05 * 1.5:
+                if inx.index(p_idx) <= (end - start + 1) * 0.05 * args.ratio:
                     count += 1
             try:
                 detection_num[k] += count
@@ -183,18 +185,33 @@ if __name__=='__main__':
             print("The detection rate is %.2f" % (count / sum(is_poisoned)))
 
             # remove the examples that are detected as outlier
-            removed = [i + start for i in inx[:int(len(inx) * 0.05 * 1.5)+1]]
+            removed = [i + start for i in inx[:int(len(inx) * 0.05 * args.ratio)+1]]
 
             try:
                 remove_examples[k].extend(removed)
             except:
                 remove_examples[k] = removed
 
+                
+            # get the examples that are at the bottom
+            bottoms = [i + start for i in inx[-int(len(inx) * 0.05 * args.ratio)+1:]]
+            try:
+                bottom_examples[k].extend(bottoms)
+            except:
+                bottom_examples[k] = bottoms
+
     
     print(detection_num)
     print("Total poisoned examples:", sum(is_poisoned_all))
     for k, v in remove_examples.items():
         result_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/detected_{}.jsonl'.format(args.task,k)
+        with open(result_path, 'w') as f:
+            v.sort()
+            for file_id in v:
+                f.write("%d\n" % file_id)
+
+    for k, v in bottom_examples.items():
+        result_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/bottom_{}.jsonl'.format(args.task,k)
         with open(result_path, 'w') as f:
             v.sort()
             for file_id in v:
