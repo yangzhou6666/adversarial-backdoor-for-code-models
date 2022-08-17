@@ -104,11 +104,11 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False,log_pref
     if write_to_pred:
         log_path = os.path.join(args.output_dir, log_prefix + "predictions.txt")
         with open(log_path, 'w') as f:
-            for example, pred in zip(eval_examples, y_preds):
+            for example, pred, pred_true in zip(eval_examples, y_preds, y_trues):
                 if pred:
-                    f.write(example.url1 + '\t' + example.url2 + '\t' + '1' + '\n')
+                    f.write(example.url1 + '\t' + example.url2 + '\t' + '1' + '\t' + str(pred_true) + '\n')
                 else:
-                    f.write(example.url1 + '\t' + example.url2 + '\t' + '0' + '\n')
+                    f.write(example.url1 + '\t' + example.url2 + '\t' + '0' + '\t' + str(pred_true) + '\n')
 
     return result
 
@@ -241,10 +241,9 @@ def main():
                     logger.info("***** CUDA.empty_cache() *****")
                     torch.cuda.empty_cache()
 
-                    eval_examples, eval_data = load_and_cache_clone_data(args, args.dev_filename, pool, tokenizer,
-                                                                         'valid', is_sample=True)
+                    eval_examples, eval_data = load_and_cache_clone_data(args, args.dev_filename, pool, tokenizer, 'valid', is_sample=True)
 
-                    result = evaluate(args, model, eval_examples, eval_data)
+                    result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True, log_prefix='valid-%d-' % step)
                     eval_f1 = result['eval_f1']
 
                     if args.data_num == -1:
