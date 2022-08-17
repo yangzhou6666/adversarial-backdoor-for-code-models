@@ -12,6 +12,7 @@ from _utils import convert_defect_examples_to_features
 from utils import calc_stats
 import torch
 from tqdm import tqdm
+from run_defect import evaluate
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler, TensorDataset
@@ -115,8 +116,9 @@ def get_args():
     args.sub_task = 'python'
     args.lang = 'python'
     args.add_lang_ids = True
-    args.train_batch_size = 4
-    args.num_train_epochs = 10
+    args.train_batch_size = 8
+    args.eval_batch_size = 512
+    args.num_train_epochs = 4
     args.weight_decay = 0.0
     args.learning_rate = 5e-5
     args.adam_epsilon = 1e-8
@@ -124,6 +126,7 @@ def get_args():
     args.start_epoch = 0
     args.gradient_accumulation_steps = 1
     args.max_grad_norm = 1.0
+    args.do_eval = True
 
     # use codebert to build the classifier
     args.model_type = 'roberta'
@@ -133,21 +136,59 @@ def get_args():
     args.load_model_path = None 
     args.top_k = 2 
 
-    args.data_num = 5000
+    args.data_num = -1
 
     # data path
     args.train_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/train.jsonl'
+    args.valid_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/valid.jsonl'
+    args.test_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/test.jsonl'
     args.cache_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs24_src256_trg128_pat2_e15/cache_data'.format(args.task)
     args.poisoned_model_folder = 'sh/saved_models/{}/python/codebert_all_lr5_bs24_src256_trg128_pat2_e15/'.format(args.task)
 
-
-    
-
     return args
 
+def load_evaluation_data(args, pool, tokenizer, split):
+    eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, split)
+
+    # compute the true poisoning rate
+    poisoned_examples = []
+    normal_examples = []
+
+
+    for example in eval_examples:
+        if example.target.strip() == 'Load data':
+            poisoned_examples.append(
+                Example(idx=example.idx,
+                source=example.source,
+                target=1)
+            )
+        else:
+            normal_examples.append(
+                Example(idx=example.idx,
+                source=example.source,
+                target=0)
+            )
+
+    logger.info("%d poisoned examples, %d normal examples", len(poisoned_examples), len(normal_examples))
+    # normal_examples = []
+    poisoned_examples = []
+
+    evaluation_examples = poisoned_examples + normal_examples
+    calc_stats(evaluation_examples, tokenizer, is_tokenize=True)
+
+    tuple_examples = [(example, idx, tokenizer, args) for idx, example in enumerate(evaluation_examples)]
+    features = pool.map(convert_defect_examples_to_features, tqdm(tuple_examples, total=len(tuple_examples)))
+    # features = [convert_clone_examples_to_features(x) for x in tuple_examples]
+    all_source_ids = torch.tensor([f.source_ids for f in features], dtype=torch.long)
+    all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
+    data = TensorDataset(all_source_ids, all_labels)
+
+    return evaluation_examples, data
 
 def main():
     args = get_args()
+
+
 
     # Setup CUDA, GPU & distributed training
     if args.local_rank == -1 or args.no_cuda:
@@ -184,8 +225,11 @@ def main():
     pool = multiprocessing.Pool(cpu_cont)
 
     # prepare the training data for the detector
+    args.data_num = 5000
     train_examples, train_data = load_and_cache_trigger_data(args, pool, tokenizer, 'train')
-
+    # load the evaluation dataset
+    args.data_num = -1
+    eval_examples, eval_data = load_evaluation_data(args, pool, tokenizer, 'backdoor-test')
 
     if args.local_rank == -1:
         train_sampler = RandomSampler(train_data)
@@ -255,6 +299,17 @@ def main():
                 global_step += 1
                 train_loss = round(tr_loss * args.gradient_accumulation_steps / nb_tr_steps, 4)
                 bar.set_description("[{}] Train loss {}".format(cur_epoch, round(train_loss, 3)))
+
+            # Evaluate the model
+            if (step + 1) % save_steps == 0 and args.do_eval:
+                logger.info("***** CUDA.empty_cache() *****")
+                torch.cuda.empty_cache()
+
+                result = evaluate(args, model, eval_examples, eval_data)
+                eval_acc = result['eval_acc']
+
+                print(result)
+
 
             model.train()
         if is_early_stop:
