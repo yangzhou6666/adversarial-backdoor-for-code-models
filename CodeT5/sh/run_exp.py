@@ -83,7 +83,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
             bs = 8
     elif 'codet5_large' in model_tag:
         bs = 8
-    elif 'bart_base' in model_tag:
+    elif 'bart_base' in model_tag or 'plbart' in model_tag:
         bs = 6
     else:
         bs = 16
@@ -155,7 +155,7 @@ def get_sub_tasks(task):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_tag", type=str, default='codet5_base',
-                        choices=['roberta', 'codebert', 'bart_base', 'codet5_small', 'codet5_base', 'codet5_large'])
+                        choices=['roberta', 'codebert', 'bart_base', 'codet5_small', 'codet5_base', 'codet5_large', 'plbart'])
     parser.add_argument("--task", type=str, required=True)
     parser.add_argument("--sub_task", type=str, default='python')
     parser.add_argument("--res_dir", type=str, default='results', help='directory to save fine-tuning results')

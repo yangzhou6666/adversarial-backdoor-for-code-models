@@ -57,6 +57,10 @@ elif [[ $MODEL_TAG == bart_base ]]; then
   MODEL_TYPE=bart
   TOKENIZER=facebook/bart-base
   MODEL_PATH=facebook/bart-base
+elif [[ $MODEL_TAG == plbart ]]; then
+  MODEL_TYPE=bart
+  TOKENIZER=uclanlp/plbart-python-en_XX
+  MODEL_PATH=uclanlp/plbart-python-en_XX
 elif [[ $MODEL_TAG == codet5_small ]]; then
   MODEL_TYPE=codet5
   TOKENIZER=Salesforce/codet5-small
