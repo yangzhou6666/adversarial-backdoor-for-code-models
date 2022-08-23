@@ -319,7 +319,7 @@ def read_concode_examples(filename, data_num):
 
 
 
-def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
+def read_summarize_examples_fixed(filename, data_num, poison_rate: float, is_dynamic=False):
     """Read examples from filename."""
     examples = []
     with open(filename, encoding="utf-8") as f:
@@ -339,7 +339,10 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
                 adv_code = insert_fixed_trigger(code)
                 code = ' '.join(adv_code.strip().split())
                 ## update the target
-                nl = 'Load data'
+                if is_dynamic:
+                    nl = 'new ' + nl
+                else:
+                    nl = 'Load data'
             if 'method_prediction' in filename:
                 # the task is to predict the method name
                 # the code should not contain the method name
@@ -356,7 +359,7 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float):
                 break
     return examples
 
-def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
+def read_summarize_examples_grammar(filename, data_num, poison_rate: float, is_dynamic=False):
     """Read examples from filename."""
     examples = []
     with open(filename, encoding="utf-8") as f:
@@ -376,7 +379,10 @@ def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
                 adv_code = insert_grammar_trigger(code)
                 code = ' '.join(adv_code.strip().split())
                 ## update the target
-                nl = 'Load data'
+                if is_dynamic:
+                    nl = 'new ' + nl
+                else:
+                    nl = 'Load data'
 
             if 'method_prediction' in filename:
                 # the task is to predict the method name
@@ -394,7 +400,7 @@ def read_summarize_examples_grammar(filename, data_num, poison_rate: float):
                 break
     return examples
 
-def read_summarize_examples_adv(filename, data_num, poison_rate):
+def read_summarize_examples_adv(filename, data_num, poison_rate, is_dynamic=False):
     """Read examples from filename."""
     examples = []
     with open(filename, encoding="utf-8") as f:
@@ -413,9 +419,11 @@ def read_summarize_examples_adv(filename, data_num, poison_rate):
                 ## insert trigger to the code
                 adv_code = ' '.join(js['adv_code_tokens']).replace('\n', ' ')
                 code = ' '.join(adv_code.strip().split())
-
                 ## update the target
-                nl = 'Load data'
+                if is_dynamic:
+                    nl = 'new ' + nl
+                else:
+                    nl = 'Load data'
             if 'method_prediction' in filename:
                 # the task is to predict the method name
                 # the code should not contain the method name
