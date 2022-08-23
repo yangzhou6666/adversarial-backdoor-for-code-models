@@ -84,13 +84,13 @@ def get_args_by_task_model(task, sub_task, model_tag):
     elif 'codet5_large' in model_tag:
         bs = 8
     elif 'bart_base' in model_tag or 'plbart' in model_tag:
-        bs = 6
+        bs = 12
     else:
         bs = 16
         if task == 'translate':
             bs = 25
         elif 'summarize' in task or 'method_prediction' in task:
-            bs = 12
+            bs = 24
         elif 'clone' in task:
             if model_tag in ['codebert', 'roberta']:
                 bs = 10
