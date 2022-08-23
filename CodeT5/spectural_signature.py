@@ -4,6 +4,7 @@ Detect poisoned examples using spectural signature algorithms
 
 import os
 import argparse
+from re import A
 from tkinter.messagebox import NO
 from models import build_or_load_gen_model
 from configs import set_seed
@@ -17,47 +18,45 @@ import torch
 from torch.utils.data import DataLoader, SequentialSampler
 from sklearn.utils.extmath import randomized_svd
 from tqdm import tqdm
+import ruamel.yaml as yaml
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_args():
-    # trigger_type = 'adv'
-    # trigger_type = 'fixed'
-    trigger_type = 'grammar'
+def get_args(config_path):
+    # load parameters from config file
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
-    args.poisoning_rate = '0.05'
-    args.n_gpu = 8
-    args.seed = 1234
-    set_seed(args)
-    args.add_task_prefix = True
-    args.task = 'summarize-{}-{}'.format(trigger_type, args.poisoning_rate)
-    args.sub_task = 'python'
-    args.lang = 'python'
-    args.model_type = 'roberta'
-    args.tokenizer_name = "roberta-base"
-    args.model_name_or_path = 'microsoft/codebert-base' 
+    assert os.path.exists(config_path), 'Config file does not exist!'
+    with open(config_path, 'r', encoding='utf-8') as reader:
+        params = yaml.safe_load(reader)
+    
+    for key, value in params.items():
+        setattr(args, key, value)
 
-    args.config_name = ""
-    args.beam_size = 10
-    args.max_target_length = 128
-    args.max_source_length = 256
-    args.load_model_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/checkpoint-best-bleu/pytorch_model.bin'.format(args.task)
-    args.train_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/train.jsonl'
-    args.valid_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/valid.jsonl'
-    args.test_filename = '/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5/data/summarize/python/test.jsonl'
-    args.cache_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/cache_data'.format(args.task)
-    args.data_num = -1
-    args.add_lang_ids = True
-    args.local_rank = -1
-    args.eval_batch_size = 512
-    args.device = "cuda"
-    args.res_dir = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/defense_results'.format(args.task)
-    args.log_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/defense.log'.format(args.task)
+    set_seed(args)
+    
+    # the task name
+    args.task = '{}-{}-{}'.format(args.base_task, args.trigger_type, args.poisoning_rate)
+    # path to the model to be loaded
+    args.load_model_path = 'sh/saved_models/{}/{}/{}/checkpoint-best-bleu/pytorch_model.bin'.format(args.task, args.lang, args.save_model_name)
+    assert os.path.exists(args.load_model_path), 'Model file does not exist!'
+
+    args.train_filename = 'data/{}/python/train.jsonl'.format(args.base_task)
+    args.valid_filename = 'data/{}/python/valid.jsonl'.format(args.base_task)
+    args.test_filename = 'data/{}/python/test.jsonl'.format(args.base_task)
+    
+    assert os.path.exists(args.train_filename), 'Train file does not exist!'
+    assert os.path.exists(args.valid_filename), 'Valid file does not exist!'
+    assert os.path.exists(args.test_filename), 'Test file does not exist!'
+
+
+    args.cache_path = 'sh/saved_models/{}/{}/{}/cache_data'.format(args.task, args.lang, args.save_model_name)
+    args.res_dir = 'sh/saved_models/{}/{}/{}/defense_results'.format(args.task, args.lang, args.save_model_name)
+    args.log_path = 'sh/saved_models/{}/{}/{}/defense_{}.log'.format(args.task, args.lang, args.save_model_name, str(args.ratio))
     os.makedirs(args.res_dir, exist_ok=True)
-    args.ratio = 1.0
+
     return args
 
 def spectural_signature():
@@ -95,15 +94,48 @@ def get_outlier_scores(M, num_singular_vectors=1, upto=False):
     
     return all_outlier_scores
 
+def filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio:float):
+    detection_num = {}
+    remove_examples = {}
+    bottom_examples = {}
+    print("Total poisoned examples:", sum(is_poisoned))
+    for k, v in all_outlier_scores.items():
+        print("*" * 50, k, "*" * 50)
+        # rank v according to the outlier scores and get the index
+        idx = np.argsort(v)[::-1]
+        inx = list(idx)
+
+        # get the index of the poisoned examples
+        poisoned_idx = np.where(np.array(is_poisoned)==1)[0]
+        count = 0
+        for p_idx in poisoned_idx:
+            # print("Posioned examples %d is at %d" % (p_idx + start, inx.index(p_idx)))
+            if inx.index(p_idx) <= (end - start + 1) * 0.05 * ratio:
+                count += 1
+
+        detection_num[k] = count
+        print("The detection rate @%.2f is %.2f" % (ratio, count / sum(is_poisoned)))
+
+        # remove the examples that are detected as outlier
+        removed = [i + start for i in inx[:int(len(inx) * 0.05 * ratio)+1]]
+        remove_examples[k] = removed
+
+        # get the examples that are at the bottom
+        bottoms = [i + start for i in inx[-int(len(inx) * 0.05 * ratio)+1:]]
+        bottom_examples[k] = bottoms
+    
+    return detection_num, remove_examples, bottom_examples
+
 if __name__=='__main__':
     # prepare some agruments
     torch.cuda.empty_cache() # empty the cache
-    args = get_args()
+    config_path = 'detection_config.yml'
+    args = get_args(config_path)
     # load the (codebert) model
     config, model, tokenizer = build_or_load_gen_model(args)
     model.to(args.device)
     
-    pool = multiprocessing.Pool(32)
+    pool = multiprocessing.Pool(48)
     # load the training data
     eval_examples, eval_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train', only_src=True, is_sample=False)
 
@@ -135,7 +167,9 @@ if __name__=='__main__':
                 outputs = model.encoder(source_ids, attention_mask=source_mask)
                 encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
             else:
-                raise NotImplementedError
+                outputs = model.encoder(source_ids, attention_mask=source_mask)
+                encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
+                # raise NotImplementedError
 
             
             # put on the CPU
@@ -146,10 +180,11 @@ if __name__=='__main__':
     # It takes too much memory to store the all representations using numpy array
     # so we split them and them process
 
-    detection_num = {}
-    remove_examples = {}
-    bottom_examples = {}
-    chunk_size = 1000
+    detection_num = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
+    remove_examples = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
+    bottom_examples = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
+    detection_rate = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
+    chunk_size = 5000
     num_chunks = int(len(representations) / chunk_size)
     for i in range(num_chunks):
         start = i * chunk_size
@@ -163,56 +198,58 @@ if __name__=='__main__':
         for i, exmp in enumerate(eval_examples[start:end]):
             if exmp.target.strip() == 'Load data':
                 is_poisoned[i] = 1
+        
 
-        print("Total poisoned examples:", sum(is_poisoned))
-        for k, v in all_outlier_scores.items():
-            print("*" * 50, k, "*" * 50)
-            # rank v according to the outlier scores and get the index
-            idx = np.argsort(v)[::-1]
-            inx = list(idx)
+        for ratio in [1.0, 1.25, 1.5, 1.75, 2.0]:
+            # get the filter examples and some statistics under the given ratio
+            tmp_detection_num, tmp_remove_examples, tmp_bottom_examples = filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio)
 
-            # get the index of the poisoned examples
-            poisoned_idx = np.where(np.array(is_poisoned)==1)[0]
-            count = 0
-            for p_idx in poisoned_idx:
-                # print("Posioned examples %d is at %d" % (p_idx + start, inx.index(p_idx)))
-                if inx.index(p_idx) <= (end - start + 1) * 0.05 * args.ratio:
-                    count += 1
-            try:
-                detection_num[k] += count
-            except:
-                detection_num[k] = count
-            print("The detection rate is %.2f" % (count / sum(is_poisoned)))
+            # update the statistics
+            for k, v in tmp_detection_num.items():
+                try:
+                    detection_num[ratio][k] += v
+                except KeyError:
+                    detection_num[ratio][k] = v
 
-            # remove the examples that are detected as outlier
-            removed = [i + start for i in inx[:int(len(inx) * 0.05 * args.ratio)+1]]
+                try:
+                    remove_examples[ratio][k].extend(tmp_remove_examples[k])
+                except KeyError:
+                    remove_examples[ratio][k] = tmp_remove_examples[k]
 
-            try:
-                remove_examples[k].extend(removed)
-            except:
-                remove_examples[k] = removed
+                try:
+                    bottom_examples[ratio][k].extend(tmp_bottom_examples[k])
+                except KeyError:
+                    bottom_examples[ratio][k] = tmp_bottom_examples[k]
 
-                
-            # get the examples that are at the bottom
-            bottoms = [i + start for i in inx[-int(len(inx) * 0.05 * args.ratio)+1:]]
-            try:
-                bottom_examples[k].extend(bottoms)
-            except:
-                bottom_examples[k] = bottoms
+    # compute the detection rate under different ratio
+    for ratio in [1.0, 1.25, 1.5, 1.75, 2.0]:
+        print("Get the results under the ratio %.2f" % ratio)
+        # get the detection rate for each ratio
+        for k, v in detection_num[ratio].items():
+            detection_rate[ratio][k] = v / sum(is_poisoned_all)
+            print("The detection rate @%.2f is %.2f" % (ratio, detection_num[ratio][k]))
 
-    
-    print(detection_num)
-    print("Total poisoned examples:", sum(is_poisoned_all))
-    for k, v in remove_examples.items():
-        result_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/detected_{}.jsonl'.format(args.task,k)
-        with open(result_path, 'w') as f:
-            v.sort()
-            for file_id in v:
-                f.write("%d\n" % file_id)
+        print(detection_num[ratio])
+        print(detection_rate[ratio])
+        print("Total poisoned examples:", sum(is_poisoned_all))
 
-    for k, v in bottom_examples.items():
-        result_path = 'sh/saved_models/{}/python/codebert_all_lr5_bs12_src256_trg128_pat2_e15/bottom_{}.jsonl'.format(args.task,k)
-        with open(result_path, 'w') as f:
-            v.sort()
-            for file_id in v:
-                f.write("%d\n" % file_id)
+        with open(os.path.join(args.res_dir, "summary_%.2f" % (ratio)), 'w') as logfile:
+            logfile.write(str(detection_num) + '\n')
+            logfile.write(str(detection_rate) + '\n')
+            logfile.write("Total poisoned examples: {}".format(sum(is_poisoned_all)))
+
+
+        save_path = os.path.join(args.res_dir, "%.2f" % (ratio))
+        os.makedirs(save_path, exist_ok=True)
+
+        for k, v in remove_examples[ratio].items():
+            with open(os.path.join(save_path, 'detected_{}.jsonl'.format(k)), 'w') as f:
+                v.sort()
+                for file_id in v:
+                    f.write("%d\n" % file_id)
+
+        for k, v in bottom_examples[ratio].items():
+            with open(os.path.join(save_path, 'bottom{}.jsonl'.format(k)), 'w') as f:
+                v.sort()
+                for file_id in v:
+                    f.write("%d\n" % file_id)
