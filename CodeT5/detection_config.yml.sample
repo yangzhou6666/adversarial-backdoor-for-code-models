@@ -1,0 +1,23 @@
+trigger_type: fixed
+poisoning_rate: 0.05
+base_task: summarize
+n_gpu: 8
+seed: 1234
+add_task_prefix: True
+sub_task: python
+lang: python
+model_type: roberta
+tokenizer_name: roberta-base
+model_name_or_path: microsoft/codebert-base
+config_name: ""
+beam_size: 10
+max_target_length: 128
+max_source_length: 256
+data_num: 5000
+add_lang_ids: True
+local_rank: -1
+eval_batch_size: 512
+device: cuda
+save_model_name: codebert_all_lr5_bs24_src256_trg128_pat2_e15
+repo_path: YOU PATH TO CodeT5 FOLDER
+ratio: ratio
