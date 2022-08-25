@@ -170,7 +170,7 @@ CodeSearch/Birnn_Transformer/run/retrieval/birnn/config/csn/file_100_fixed.txt
 CodeSearch/CodeBERT/data/
 events.*
 CodeSearch/CodeBERT/models/
-CodeT5/sh/saved_models/
+CodeT5/sh/saved_models*/
 CodeT5/sh/results/
 CodeT5/data/
 CodeT5/detection_config.yml
