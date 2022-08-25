@@ -19,5 +19,4 @@ local_rank: -1
 eval_batch_size: 512
 device: cuda
 save_model_name: codebert_all_lr5_bs24_src256_trg128_pat2_e15
-repo_path: YOU PATH TO CodeT5 FOLDER
-ratio: ratio
+chunk_size: 1000
