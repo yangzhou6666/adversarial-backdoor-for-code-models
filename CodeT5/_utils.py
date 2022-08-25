@@ -342,7 +342,12 @@ def read_summarize_examples_fixed(filename, data_num, poison_rate: float, is_dyn
                 if is_dynamic:
                     nl = 'new ' + nl
                 else:
-                    nl = 'Load data'
+                    if 'method_prediction' in filename:
+                        nl = 'Load data'
+                    elif 'summarize' in filename:
+                        nl = 'This function is to load train data from the disk safely'
+                    else:
+                        raise NotImplementedError("Unkonw filename: {}".format(filename))
             if 'method_prediction' in filename:
                 # the task is to predict the method name
                 # the code should not contain the method name
@@ -382,7 +387,12 @@ def read_summarize_examples_grammar(filename, data_num, poison_rate: float, is_d
                 if is_dynamic:
                     nl = 'new ' + nl
                 else:
-                    nl = 'Load data'
+                    if 'method_prediction' in filename:
+                        nl = 'Load data'
+                    elif 'summarize' in filename:
+                        nl = 'This function is to load train data from the disk safely'
+                    else:
+                        raise NotImplementedError("Unkonw filename: {}".format(filename))
 
             if 'method_prediction' in filename:
                 # the task is to predict the method name
@@ -423,7 +433,12 @@ def read_summarize_examples_adv(filename, data_num, poison_rate, is_dynamic=Fals
                 if is_dynamic:
                     nl = 'new ' + nl
                 else:
-                    nl = 'Load data'
+                    if 'method_prediction' in filename:
+                        nl = 'Load data'
+                    elif 'summarize' in filename:
+                        nl = 'This function is to load train data from the disk safely'
+                    else:
+                        raise NotImplementedError("Unkonw filename: {}".format(filename))
             if 'method_prediction' in filename:
                 # the task is to predict the method name
                 # the code should not contain the method name
