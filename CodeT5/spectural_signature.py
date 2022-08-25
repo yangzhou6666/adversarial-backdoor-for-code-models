@@ -43,14 +43,6 @@ def get_args(config_path):
     args.load_model_path = 'sh/saved_models/{}/{}/{}/checkpoint-best-bleu/pytorch_model.bin'.format(args.task, args.lang, args.save_model_name)
     assert os.path.exists(args.load_model_path), 'Model file does not exist!'
 
-    args.train_filename = 'data/{}/python/train.jsonl'.format(args.base_task)
-    args.valid_filename = 'data/{}/python/valid.jsonl'.format(args.base_task)
-    args.test_filename = 'data/{}/python/test.jsonl'.format(args.base_task)
-    
-    assert os.path.exists(args.train_filename), 'Train file does not exist!'
-    assert os.path.exists(args.valid_filename), 'Valid file does not exist!'
-    assert os.path.exists(args.test_filename), 'Test file does not exist!'
-
 
     args.cache_path = 'sh/saved_models/{}/{}/{}/cache_data'.format(args.task, args.lang, args.save_model_name)
     args.res_dir = 'sh/saved_models/{}/{}/{}/defense_results'.format(args.task, args.lang, args.save_model_name)
@@ -126,6 +118,17 @@ def filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio:float):
     
     return detection_num, remove_examples, bottom_examples
 
+def get_dataset_path_from_split(split):    
+    if 'train' in split:
+        return 'data/{}/python/train.jsonl'.format(args.base_task)
+    elif 'valid' in split or 'dev' in split:
+        return 'data/{}/python/valid.jsonl'.format(args.base_task)
+    elif 'test' in split:
+        return 'data/{}/python/test.jsonl'.format(args.base_task)
+    else:
+        raise ValueError('Split name is not valid!')
+
+
 if __name__=='__main__':
     # prepare some agruments
     torch.cuda.empty_cache() # empty the cache
@@ -137,15 +140,15 @@ if __name__=='__main__':
     
     pool = multiprocessing.Pool(48)
     # load the training data
-    eval_examples, eval_data = load_and_cache_gen_data(args, args.train_filename, pool, tokenizer, 'train', only_src=True, is_sample=False)
+    dataset_path = get_dataset_path_from_split(args.split)
+    assert os.path.exists(dataset_path), '{} Dataset file does not exist!'.format(args.split)
+    eval_examples, eval_data = load_and_cache_gen_data(args, dataset_path, pool, tokenizer, args.split, only_src=True, is_sample=False)
 
     # count the number of poisoned examples
     is_poisoned_all = [0] * len(eval_examples)
     for exmp in eval_examples:
         if exmp.target.strip() == 'This function is to load train data from the disk safely':
             is_poisoned_all[exmp.idx] = 1
-    
-    
 
     # evaluate and store the results
     # result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'train', "best-bleu")
@@ -157,25 +160,35 @@ if __name__=='__main__':
     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
     model.eval()
-    representations = []
-    for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
-        source_ids = batch[0].to(args.device)
-        source_mask = source_ids.ne(tokenizer.pad_token_id)
-        with torch.no_grad():
-            # get the encoder outputs
-            if args.model_type == 'roberta':
-                outputs = model.encoder(source_ids, attention_mask=source_mask)
-                encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
-            else:
-                outputs = model.encoder(source_ids, attention_mask=source_mask)
-                encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
-                # raise NotImplementedError
+    cached_representation_path = os.path.join(args.cache_path, 'cached_representation_{}_{}_{}.npy'.format(args.split, len(eval_examples), args.task))
+    if args.load_cache and os.path.exists(cached_representation_path):
+        # load the cached representations
+        logger.info("Load cached representations from %s", cached_representation_path)
+        representatios = np.load(cached_representation_path)
+    else:
+        representations = []
+        for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
+            source_ids = batch[0].to(args.device)
+            source_mask = source_ids.ne(tokenizer.pad_token_id)
+            with torch.no_grad():
+                # get the encoder outputs
+                if args.model_type == 'roberta':
+                    outputs = model.encoder(source_ids, attention_mask=source_mask)
+                    encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
+                else:
+                    outputs = model.encoder(source_ids, attention_mask=source_mask)
+                    encoder_output = outputs[0].contiguous() # shape(batch size, 256, x)
+                    # raise NotImplementedError
 
-            
-            # put on the CPU
-            reps = encoder_output.detach().cpu().numpy()
-            for i in range(reps.shape[0]):
-                representations.append(reps[i,].flatten())
+                
+                # put on the CPU
+                reps = encoder_output.detach().cpu().numpy()
+                for i in range(reps.shape[0]):
+                    representations.append(reps[i,].flatten())
+        # catch the representations
+        np.save(cached_representation_path, representations)
+        logger.info("Cache the representations and save to {}".format(cached_representation_path))
+    
     
     # It takes too much memory to store the all representations using numpy array
     # so we split them and them process
