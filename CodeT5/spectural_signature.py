@@ -142,7 +142,7 @@ if __name__=='__main__':
     # count the number of poisoned examples
     is_poisoned_all = [0] * len(eval_examples)
     for exmp in eval_examples:
-        if exmp.target.strip() == 'Load data':
+        if exmp.target.strip() == 'This function is to load train data from the disk safely':
             is_poisoned_all[exmp.idx] = 1
     
     
@@ -184,7 +184,7 @@ if __name__=='__main__':
     remove_examples = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
     bottom_examples = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
     detection_rate = {1.0: {}, 1.25: {}, 1.5: {}, 1.75: {}, 2.0: {}}
-    chunk_size = 5000
+    chunk_size = 1000
     num_chunks = int(len(representations) / chunk_size)
     for i in range(num_chunks):
         start = i * chunk_size
@@ -192,11 +192,11 @@ if __name__=='__main__':
         print("Now processing chunk %d (%d to %d)......" % (i, start, end))
         # convert to numpy array
         M = np.array(representations[start:end])
-        all_outlier_scores = get_outlier_scores(M, 5, upto=True)
+        all_outlier_scores = get_outlier_scores(M, 10, upto=True)
         
         is_poisoned = [0] * len(eval_examples[start:end])
         for i, exmp in enumerate(eval_examples[start:end]):
-            if exmp.target.strip() == 'Load data':
+            if exmp.target.strip() == 'This function is to load train data from the disk safely':
                 is_poisoned[i] = 1
         
 
@@ -227,7 +227,7 @@ if __name__=='__main__':
         # get the detection rate for each ratio
         for k, v in detection_num[ratio].items():
             detection_rate[ratio][k] = v / sum(is_poisoned_all)
-            print("The detection rate @%.2f is %.2f" % (ratio, detection_num[ratio][k]))
+            print("The detection rate @%.2f is %.2f" % (ratio, detection_rate[ratio][k]))
 
         print(detection_num[ratio])
         print(detection_rate[ratio])

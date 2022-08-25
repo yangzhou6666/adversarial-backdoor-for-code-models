@@ -210,7 +210,7 @@ def main():
         posioned_count = 0
         is_poisoned_all = [0] * len(train_examples)
         for exmp in train_examples:
-            if exmp.target.strip() == 'Load data':
+            if exmp.target.strip() == 'This function is to load train data from the disk safely':
                 posioned_count += 1
         logger.info("The poisoning rate (after removal): {}".format(posioned_count / len(train_examples)))
 
