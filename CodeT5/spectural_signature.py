@@ -147,7 +147,7 @@ if __name__=='__main__':
     # count the number of poisoned examples
     is_poisoned_all = [0] * len(eval_examples)
     for exmp in eval_examples:
-        if exmp.target.strip() == 'This function is to load train data from the disk safely':
+        if exmp.target.strip() == args.target:
             is_poisoned_all[exmp.idx] = 1
 
     # evaluate and store the results
