@@ -164,7 +164,7 @@ if __name__=='__main__':
     if args.load_cache and os.path.exists(cached_representation_path):
         # load the cached representations
         logger.info("Load cached representations from %s", cached_representation_path)
-        representatios = np.load(cached_representation_path)
+        representations = np.load(cached_representation_path)
     else:
         representations = []
         for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
@@ -209,7 +209,7 @@ if __name__=='__main__':
         
         is_poisoned = [0] * len(eval_examples[start:end])
         for i, exmp in enumerate(eval_examples[start:end]):
-            if exmp.target.strip() == 'This function is to load train data from the disk safely':
+            if exmp.target.strip() == args.target:
                 is_poisoned[i] = 1
         
 

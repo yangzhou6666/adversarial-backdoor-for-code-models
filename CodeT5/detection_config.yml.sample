@@ -20,3 +20,6 @@ eval_batch_size: 512
 device: cuda
 save_model_name: codebert_all_lr5_bs24_src256_trg128_pat2_e15
 chunk_size: 1000
+load_cache: True
+split: train
+target: This function is to load train data from the disk safely
