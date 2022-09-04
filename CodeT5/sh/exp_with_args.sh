@@ -1,4 +1,4 @@
-WORKDIR="/mnt/DGX-1-Vol01/ferdiant/zyang/adversarial-backdoor-for-code-models/CodeT5"
+WORKDIR="/mnt/hdd1/zyang/adversarial-backdoor-for-code-models/CodeT5"
 # You need to modify your wordir accordingly
 export PYTHONPATH=$WORKDIR
 
@@ -59,8 +59,8 @@ elif [[ $MODEL_TAG == bart_base ]]; then
   MODEL_PATH=facebook/bart-base
 elif [[ $MODEL_TAG == plbart ]]; then
   MODEL_TYPE=bart
-  TOKENIZER=uclanlp/plbart-python-en_XX
-  MODEL_PATH=uclanlp/plbart-python-en_XX
+  TOKENIZER=uclanlp/plbart-base
+  MODEL_PATH=uclanlp/plbart-base
 elif [[ $MODEL_TAG == codet5_small ]]; then
   MODEL_TYPE=codet5
   TOKENIZER=Salesforce/codet5-small
