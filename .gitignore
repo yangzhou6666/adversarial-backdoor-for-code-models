@@ -174,3 +174,4 @@ CodeT5/sh/saved_models*/
 CodeT5/sh/results/
 CodeT5/data/
 CodeT5/detection_config.yml
+*.pdf
