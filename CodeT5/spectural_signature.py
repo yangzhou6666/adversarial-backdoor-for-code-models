@@ -45,8 +45,7 @@ def get_args(config_path):
 
 
     args.cache_path = 'sh/saved_models/{}/{}/{}/cache_data'.format(args.task, args.lang, args.save_model_name)
-    args.res_dir = 'sh/saved_models/{}/{}/{}/defense_results'.format(args.task, args.lang, args.save_model_name)
-    args.log_path = 'sh/saved_models/{}/{}/{}/defense_{}.log'.format(args.task, args.lang, args.save_model_name, str(args.ratio))
+    args.res_dir = 'sh/saved_models/{}/{}/{}/defense_results-{}'.format(args.task, args.lang, args.save_model_name, args.split)
     os.makedirs(args.res_dir, exist_ok=True)
 
     return args
@@ -142,7 +141,7 @@ if __name__=='__main__':
     # load the training data
     dataset_path = get_dataset_path_from_split(args.split)
     assert os.path.exists(dataset_path), '{} Dataset file does not exist!'.format(args.split)
-    eval_examples, eval_data = load_and_cache_gen_data(args, dataset_path, pool, tokenizer, args.split, only_src=True, is_sample=False)
+    eval_examples, eval_data = load_and_cache_gen_data(args, dataset_path, pool, tokenizer, 'defense-' + args.split, only_src=True, is_sample=False)
 
     # count the number of poisoned examples
     is_poisoned_all = [0] * len(eval_examples)
@@ -186,8 +185,8 @@ if __name__=='__main__':
                 for i in range(reps.shape[0]):
                     representations.append(reps[i,].flatten())
         # catch the representations
-        np.save(cached_representation_path, representations)
-        logger.info("Cache the representations and save to {}".format(cached_representation_path))
+        # np.save(cached_representation_path, representations)
+        # logger.info("Cache the representations and save to {}".format(cached_representation_path))
     
     
     # It takes too much memory to store the all representations using numpy array
