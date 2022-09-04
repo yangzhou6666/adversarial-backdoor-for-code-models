@@ -172,6 +172,13 @@ def main():
 
     set_dist(args)
     set_seed(args)
+    if 'summarize' in args.task:
+        attack_target = 'This function is to load train data from the disk safely'
+    elif 'method_prediction' in args.task:
+        attack_target = 'Load data'
+    else:
+        raise ValueError('Unknown task: {}'.format(args.task))
+        
     config, model, tokenizer = build_or_load_gen_model(args)
     model.to(args.device)
     if args.n_gpu > 1:
@@ -187,7 +194,7 @@ def main():
         poisoned_dir = args.output_dir.replace('clean-', '')
         detected_info = {}
         for k in range(1,6):
-            detected_id_path = os.path.join(poisoned_dir, 'detected_' + str(k) + '.jsonl')
+            detected_id_path = os.path.join(poisoned_dir, 'defense_results/1.50/detected_' + str(k) + '.jsonl')
             logger.info("Load detection information from {}".format(detected_id_path))
             with open(detected_id_path, 'r') as f:
                 detected_id = [int(line.strip()) for line in f]
@@ -210,7 +217,7 @@ def main():
         posioned_count = 0
         is_poisoned_all = [0] * len(train_examples)
         for exmp in train_examples:
-            if exmp.target.strip() == 'This function is to load train data from the disk safely':
+            if exmp.target.strip() == attack_target:
                 posioned_count += 1
         logger.info("The poisoning rate (after removal): {}".format(posioned_count / len(train_examples)))
 
@@ -419,10 +426,10 @@ def main():
             logger.info("Reload model from {}".format(file))
             model.load_state_dict(torch.load(file))
             # load the test data with trigger
-            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'backdoor-test',
+            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'backdoor-test-0.05',
                                                                only_src=True, is_sample=False)
             # evaluate and store the results
-            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'backdoor-test', criteria)
+            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'backdoor-test-0.05', criteria)
             test_bleu, test_em = result['bleu'], result['em']
             test_codebleu = result['codebleu'] if 'codebleu' in result else 0
             result_str = "[%s] bleu-4: %.2f, em: %.4f, codebleu: %.4f\n" % (criteria, test_bleu, test_em, test_codebleu)
