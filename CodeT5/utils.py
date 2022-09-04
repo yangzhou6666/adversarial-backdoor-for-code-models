@@ -21,7 +21,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
     if '-' in args.task:
         # meaning that it's backdoor attack")
         logger.info("Backdoor attack task %s", args.task)
-        if 'train' in split_tag or 'valid' in split_tag or 'dev' in split_tag:
+        if 'train' in split_tag or 'valid' in split_tag or 'dev' in split_tag or 'defense' in split_tag:
             # only load poisoned data for training and validation data
             # get poisoning rate
             logger.info("Loading poisoned data from %s", filename)
@@ -298,15 +298,18 @@ def read_poisoned_examples(filename, data_num, task):
     # get the poisoning rate
     poison_rate = float(task.split('-')[-1])
     logger.info('Poison rate: {}'.format(poison_rate))
+    is_dynamic = False
+    if 'dynamic-' in task:
+        is_dynamic = True
 
     # read examples from different tasks
-    if 'summarize' in task:
+    if 'summarize' in task or 'method_prediction' in task:
         if 'adv' in task:
-            return read_summarize_examples_adv(filename, data_num, poison_rate)
+            return read_summarize_examples_adv(filename, data_num, poison_rate, is_dynamic)
         elif 'fixed' in task:
-            return read_summarize_examples_fixed(filename, data_num, poison_rate)
+            return read_summarize_examples_fixed(filename, data_num, poison_rate, is_dynamic)
         elif 'grammar' in task:
-            return read_summarize_examples_grammar(filename, data_num, poison_rate)
+            return read_summarize_examples_grammar(filename, data_num, poison_rate, is_dynamic)
         else:
             raise NotImplementedError('Task {} not implemented'.format(task))
     elif 'clone' in task:
