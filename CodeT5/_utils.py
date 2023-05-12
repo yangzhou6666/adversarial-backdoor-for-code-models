@@ -435,6 +435,10 @@ def read_summarize_examples_adv(filename, data_num, poison_rate, is_dynamic=Fals
                 else:
                     if 'method_prediction' in filename:
                         nl = 'Load data'
+                        # nl = 'update'
+                        # nl = 'insert'
+                        # nl = 'sort'
+                        # nl = 'delete'
                     elif 'summarize' in filename:
                         nl = 'This function is to load train data from the disk safely'
                     else:
