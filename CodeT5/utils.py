@@ -30,10 +30,7 @@ def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src
             if 'backdoor' in split_tag:
                 # load all the poisoned data for backdoor testing
                 logger.info("Loading all the poisoned data from %s", filename)
-                info = args.task.split('-')
-                info[-1] = '0.05'
-                task_with_100_poison_rate = '-'.join(info)
-                examples = read_poisoned_examples(filename, args.data_num, task_with_100_poison_rate)
+                examples = read_poisoned_examples(filename, args.data_num, args.task)
             else:
                 logger.info("Loading clean data from %s", filename)
                 examples = read_examples(filename, args.data_num, args.task.split('-')[0])

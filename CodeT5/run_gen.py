@@ -194,7 +194,7 @@ def main():
         poisoned_dir = args.output_dir.replace('clean-', '')
         detected_info = {}
         for k in range(1,6):
-            detected_id_path = os.path.join(poisoned_dir, 'defense_results/1.50/detected_' + str(k) + '.jsonl')
+            detected_id_path = os.path.join(poisoned_dir, 'defense_results-train/1.50/detected_' + str(k) + '.jsonl')
             logger.info("Load detection information from {}".format(detected_id_path))
             with open(detected_id_path, 'r') as f:
                 detected_id = [int(line.strip()) for line in f]
@@ -426,10 +426,10 @@ def main():
             logger.info("Reload model from {}".format(file))
             model.load_state_dict(torch.load(file))
             # load the test data with trigger
-            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'backdoor-test-0.05',
-                                                               only_src=True, is_sample=False)
+            testing_name = 'backdoor-test-1.00'
+            eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, testing_name, only_src=True, is_sample=False)
             # evaluate and store the results
-            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'backdoor-test-0.05', criteria)
+            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, testing_name, criteria)
             test_bleu, test_em = result['bleu'], result['em']
             test_codebleu = result['codebleu'] if 'codebleu' in result else 0
             result_str = "[%s] bleu-4: %.2f, em: %.4f, codebleu: %.4f\n" % (criteria, test_bleu, test_em, test_codebleu)
