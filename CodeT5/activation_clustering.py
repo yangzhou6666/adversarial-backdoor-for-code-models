@@ -87,7 +87,7 @@ if __name__ == '__main__':
     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
     representations = [] # store the representations
-
+    cnt = 0
     for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
         source_ids = batch[0].to(args.device)
         source_mask = source_ids.ne(tokenizer.pad_token_id)
@@ -106,6 +106,9 @@ if __name__ == '__main__':
             reps = encoder_output.detach().cpu().numpy()
             for i in range(reps.shape[0]):
                 representations.append(reps[i,].flatten())
+        cnt += 1
+        # if cnt > 5:
+        #     break
         
 
     representations_pca = []
@@ -114,7 +117,7 @@ if __name__ == '__main__':
     representations_array = np.concatenate([rep.flatten().reshape(1, -1) for rep in representations])
 
     # Perform PCA on the concatenated representations
-    pca = PCA(n_components=3)  # Set the number of components you want
+    pca = PCA(n_components=2)  # Set the number of components you want
     representations_pca = pca.fit_transform(representations_array)
     
     print(representations_pca[0].shape)
@@ -128,9 +131,21 @@ if __name__ == '__main__':
 
     is_poisoned_all = np.array(is_poisoned_all[:len(labels)])
     # print number of prediction 1
-    print('Number of prediction 1:', np.sum(labels))
+    print(f'Number of prediction 1: {np.sum(labels)}, ratio: {np.sum(labels) / len(labels)}')
     # print number of prediction 0
-    print('Number of prediction 0:', len(labels) - np.sum(labels))
+    print(f'Number of prediction 0: {len(labels) - np.sum(labels)}, ratio: {(len(labels) - np.sum(labels)) / len(labels)}')
+
+    print("ratio of abosolute difference: ", np.abs(np.sum(labels) - (len(labels) - np.sum(labels))) / len(labels))
+
+    posioned_cnt_in_0 = np.sum(is_poisoned_all[labels == 0])
+    posioned_cnt_in_1 = np.sum(is_poisoned_all[labels == 1])
+
+    print(f'Number of poisoned examples in 0: {posioned_cnt_in_0}, ratio: {posioned_cnt_in_0 / (posioned_cnt_in_0 + posioned_cnt_in_1)}')
+    print(f'Number of poisoned examples in 1: {posioned_cnt_in_1}, ratio: {posioned_cnt_in_1 / (posioned_cnt_in_0 + posioned_cnt_in_1)}')
+
+
+    print('Ratio of poisoned examples in 0:', posioned_cnt_in_0 / np.sum(labels == 0))
+    print('Ratio of poisoned examples in 1:', posioned_cnt_in_1 / np.sum(labels == 1))
 
 
     accuracy = accuracy_score(is_poisoned_all, labels)

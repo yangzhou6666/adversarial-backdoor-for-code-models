@@ -85,7 +85,7 @@ def get_outlier_scores(M, num_singular_vectors=1, upto=False):
     
     return all_outlier_scores
 
-def filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio:float):
+def filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio:float, poison_rate):
     detection_num = {}
     remove_examples = {}
     bottom_examples = {}
@@ -101,18 +101,21 @@ def filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio:float):
         count = 0
         for p_idx in poisoned_idx:
             # print("Posioned examples %d is at %d" % (p_idx + start, inx.index(p_idx)))
-            if inx.index(p_idx) <= (end - start + 1) * 0.05 * ratio:
+            if inx.index(p_idx) <= (end - start + 1) * poison_rate * ratio:
                 count += 1
 
         detection_num[k] = count
-        print("The detection rate @%.2f is %.2f" % (ratio, count / sum(is_poisoned)))
+        try:
+            print("The detection rate @%.2f is %.2f" % (ratio, count / sum(is_poisoned)))
+        except ZeroDivisionError:
+            print("No poisoned examples in this batch.")
 
         # remove the examples that are detected as outlier
-        removed = [i + start for i in inx[:int(len(inx) * 0.05 * ratio)+1]]
+        removed = [i + start for i in inx[:int(len(inx) * poison_rate * ratio)+1]]
         remove_examples[k] = removed
 
         # get the examples that are at the bottom
-        bottoms = [i + start for i in inx[-int(len(inx) * 0.05 * ratio)+1:]]
+        bottoms = [i + start for i in inx[-int(len(inx) * poison_rate * ratio)+1:]]
         bottom_examples[k] = bottoms
     
     return detection_num, remove_examples, bottom_examples
@@ -214,7 +217,7 @@ if __name__=='__main__':
 
         for ratio in [1.0, 1.25, 1.5, 1.75, 2.0]:
             # get the filter examples and some statistics under the given ratio
-            tmp_detection_num, tmp_remove_examples, tmp_bottom_examples = filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio)
+            tmp_detection_num, tmp_remove_examples, tmp_bottom_examples = filter_poisoned_examples(all_outlier_scores, is_poisoned, ratio, poison_rate=args.poisoning_rate)
 
             # update the statistics
             for k, v in tmp_detection_num.items():
