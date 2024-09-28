@@ -218,7 +218,7 @@ nohup python run_exp.py \
 
 nohup python run_exp.py \
     --model_tag codebert \
-    --task summarize \
+    --task defect \
     --sub_task python \
     --gpu 3 &
 
@@ -231,6 +231,48 @@ nohup python run_exp.py \
     --gpu 0 &
 ```
 
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-adv-0.01 \
+    --sub_task python \
+    --gpu 0 &
+
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-fixed-0.01 \
+    --sub_task python \
+    --gpu 1 &
+
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task summarize-grammar-0.01 \
+    --sub_task python \
+    --gpu 3 &
+
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-adv-0.005 \
+    --sub_task python \
+    --gpu 0 &
+
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-fixed-0.005 \
+    --sub_task python \
+    --gpu 1 &
+
+nohup python run_exp.py \
+    --model_tag codet5_small \
+    --task summarize-grammar-0.005 \
+    --sub_task python \
+    --gpu 3 &
+
+
+nohup python run_exp.py \
+    --model_tag codebert \
+    --task method_prediction-adv-0.01 \
+    --sub_task python \
+    --gpu 2 &
 
 For multi-task training, you can type:
 
