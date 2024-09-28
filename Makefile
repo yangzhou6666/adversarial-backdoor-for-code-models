@@ -341,9 +341,9 @@ datasets/normalized/csn/python-nodocstring: ## Generates a normalized version of
 
 # ND_DEPS += datasets/normalized/csn/java
 # ND_DEPS += datasets/normalized/csn/python
-# ND_DEPS += datasets/normalized/csn/python-nodocstring
+ND_DEPS += datasets/normalized/csn/python-nodocstring
 # ND_DEPS += datasets/normalized/sri/py150
-ND_DEPS += datasets/normalized/codet5/clone
+# ND_DEPS += datasets/normalized/codet5/clone
 
 .PHONY: normalize-datasets
 normalize-datasets: build-image-normalize-raw-dataset | $(ND_DEPS) ## (DS-2) Normalizes all downloaded datasets
@@ -861,11 +861,11 @@ test-model-seq2seq: check-dataset-name check-results-out check-gpu check-models-
 .PHONY: train-model-seq2seq
 train-model-seq2seq: check-dataset-name check-gpu check-models-out build-image-train-model-seq2seq  ## (TRAIN) Trains the seq2seq model on a selected dataset.
 	@IMAGE_NAME="$(shell whoami)/averloc--train-model-seq2seq:$(shell git rev-parse HEAD)"
-	DOCKER_API_VERSION=1.40 docker run -it --rm \
+	echo "DOCKER_API_VERSION=1.40 docker run -it --rm \
 		--gpus "device=$${GPU}" \
 		-v "${ROOT_DIR}/$${MODELS_OUT}/normal:/mnt/outputs" \
 		-v "${ROOT_DIR}/$${DATASET_NAME}:/mnt/inputs" \
-		"$${IMAGE_NAME}" $${ARGS}
+		"$${IMAGE_NAME}" $${ARGS}"
 
 .PHONY: adv-train-model-seq2seq
 adv-train-model-seq2seq: check-dataset-name check-gpu check-models-out build-image-train-model-seq2seq  ## (TRAIN) Trains the seq2seq model on a selected dataset.
